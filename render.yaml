@@ -1,0 +1,58 @@
+services:
+  - type: web
+    name: atelier-reparation-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 22.9.0
+
+      - key: FRONTEND_URL
+        sync: false
+
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: JWT_EXPIRES_IN
+        value: 8h
+
+      - key: TRACKING_SALT
+        generateValue: true
+
+      - key: DATABASE_FILE
+        value: ./data/atelier.sqlite
+
+      - key: UPLOAD_DIR
+        value: ./uploads
+
+      - key: MAX_UPLOAD_SIZE
+        value: "5242880"
+
+      - key: ATELIER_NAME
+        value: "Atelier de réparation électronique"
+
+      - key: ADMIN_EMAIL
+        sync: false
+
+      - key: ADMIN_PASSWORD
+        sync: false
+
+      - key: ASSISTANT_EMAIL
+        sync: false
+
+      - key: ASSISTANT_PASSWORD
+        sync: false
+
+  - type: web
+    name: atelier-reparation-frontend
+    runtime: static
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
