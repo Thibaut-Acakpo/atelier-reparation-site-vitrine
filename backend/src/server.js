@@ -62,6 +62,6 @@ app.use((err, req, res, next) => {
   return fail(res, 'Une erreur interne est survenue.', 500);
 });
 
-app.listen(PORT, () => {
-  console.log(`API atelier-réparation démarrée sur le port ${PORT}`); // eslint-disable-line no-console
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`API atelier-réparation démarrée sur le port ${PORT}`);
 });
