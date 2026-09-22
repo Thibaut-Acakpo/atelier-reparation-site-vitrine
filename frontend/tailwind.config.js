@@ -4,13 +4,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        'bleu-nuit': '#0F233A',
-        'bleu-technique': '#195C96',
-        'bleu-clair': '#1F8FB5',
-        'or-discret': '#C4972D',
-        'gris-clair': '#F1F5F8',
-        'gris-texte': '#606973',
-      },
+  'bleu-nuit': '#0A1B33',       // bleu nuit très sombre — autorité
+  'bleu-technique': '#0F2E5C',  // bleu marine sombre — couleur principale
+  'bleu-clair': '#1B4F8A',      // bleu moyen sombre — accents
+  'or-discret': '#C4972D',      // or discret inchangé
+  'gris-clair': '#F1F5F8',
+  'gris-texte': '#606973',
+},
       fontFamily: {
         titre: ['Manrope', 'Inter', 'system-ui', 'sans-serif'],
         texte: ['Inter', 'system-ui', 'sans-serif'],
