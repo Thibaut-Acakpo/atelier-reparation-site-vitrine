@@ -1,0 +1,25 @@
+# Dépendances
+node_modules/
+
+# Environnement
+.env
+*.env.local
+
+# Base de données locale et fichiers uploadés
+backend/data/
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Builds
+frontend/dist/
+frontend/node_modules/
+backend/node_modules/
+
+# Système
+.DS_Store
+Thumbs.db
+npm-debug.log*
+
+# Éditeurs
+.vscode/
+.idea/

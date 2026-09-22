@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:focus-visible {
+  outline: 3px solid #1f8fb5;
+  outline-offset: 2px;
+}
+
+.container-site {
+  @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2;
+}
+
+.btn-primary {
+  @apply btn bg-bleu-technique text-white hover:bg-bleu-nuit hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0;
+}
+
+.btn-secondary {
+  @apply btn bg-white text-bleu-nuit ring-1 ring-inset ring-bleu-nuit/15 hover:ring-bleu-technique hover:text-bleu-technique hover:-translate-y-0.5 active:translate-y-0;
+}
+
+.btn-or {
+  @apply btn bg-or-discret text-bleu-nuit hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0;
+}
+
+.section-title {
+  @apply font-titre text-3xl sm:text-4xl font-bold text-bleu-nuit;
+}
+
+.card {
+  @apply rounded-2xl bg-white p-6 shadow-sm ring-1 ring-bleu-nuit/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-md;
+}
+
+.input-field {
+  @apply w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-bleu-nuit placeholder:text-gray-400 focus:border-bleu-technique focus:outline-none focus:ring-2 focus:ring-bleu-technique/30;
+}
+
+.input-field-error {
+  @apply border-red-400 focus:border-red-500 focus:ring-red-200;
+}
+
+.field-error-text {
+  @apply mt-1 text-sm text-red-600;
+}
