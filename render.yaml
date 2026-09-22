@@ -2,7 +2,6 @@ services:
   - type: web
     name: atelier-reparation-backend
     runtime: node
-    plan: free
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
@@ -49,7 +48,6 @@ services:
   - type: web
     name: atelier-reparation-frontend
     runtime: static
-    plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
