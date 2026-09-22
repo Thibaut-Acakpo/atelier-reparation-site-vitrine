@@ -48,10 +48,11 @@ export const adminApi = {
 
   dashboard: () => request('/dashboard'),
 
-  demandes: (statut) => request(`/demandes${statut ? `?statut=${statut}` : ''}`),
-  demande: (id) => request(`/demandes/${id}`),
-  majDemande: (id, data) => request(`/demandes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-  convertirDemande: (id) => request(`/demandes/${id}/convertir`, { method: 'POST' }),
+    demandes: (statut) => request(`/demandes${statut ? `?statut=${statut}` : ''}`),
+    demande: (id) => request(`/demandes/${id}`),
+    majDemande: (id, data) => request(`/demandes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    convertirDemande: (id) => request(`/demandes/${id}/convertir`, { method: 'POST' }),
+    supprimerDemande: (id) => request(`/demandes/${id}`, { method: 'DELETE' }),
 
   rendezVous: (statut) => request(`/rendez-vous${statut ? `?statut=${statut}` : ''}`),
   majRendezVous: (id, data) => request(`/rendez-vous/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
