@@ -62,7 +62,7 @@ export default function Home() {
               Atelier de référence au Bénin
             </p>
             <h1 className="max-w-3xl font-titre text-4xl font-extrabold leading-tight sm:text-5xl md:text-6xl">
-              Réparation électronique. Diagnostic précis. Service de confiance.
+              Nous réparons vos appareils avec soin et précision.
             </h1>
             <p className="mt-6 max-w-xl text-lg text-white/80">
               Téléphones, ordinateurs, tablettes et autres appareils. Confiez votre appareil à un atelier spécialisé.
