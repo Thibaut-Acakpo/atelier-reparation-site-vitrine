@@ -47,7 +47,7 @@ services:
         sync: false
 
   - type: web
-    name: atelier-reparation-frontend
+    name: atelier
     runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
