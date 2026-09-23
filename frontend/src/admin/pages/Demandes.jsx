@@ -18,6 +18,8 @@ import {
   LoadingState,
 } from '../components/ui';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const ONGLETS = [
   { value: '', label: 'Toutes' },
   { value: 'nouvelle', label: 'Nouvelles' },
@@ -57,6 +59,31 @@ export default function Demandes() {
   useEffect(() => {
     charger();
   }, [onglet]);
+
+  // ============================================================
+  // Construire l'URL complète d'une photo
+  // ============================================================
+  const obtenirUrlPhoto = (photoPath) => {
+    if (!photoPath) {
+      return '';
+    }
+
+    // Si le backend renvoie déjà une URL complète,
+    // on la conserve telle quelle.
+    if (
+      photoPath.startsWith('http://') ||
+      photoPath.startsWith('https://')
+    ) {
+      return photoPath;
+    }
+
+    // Sinon, on ajoute l'URL du backend.
+    const chemin = photoPath.startsWith('/')
+      ? photoPath
+      : `/${photoPath}`;
+
+    return `${API_URL}${chemin}`;
+  };
 
   // ============================================================
   // Marquer en cours d'examen
@@ -193,7 +220,7 @@ export default function Demandes() {
       />
 
       {/* ======================================================
-          MESSAGE APRES CONVERSION
+          MESSAGE APRÈS CONVERSION
       ======================================================= */}
       {resultatConversion && (
         <div className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900">
@@ -325,9 +352,7 @@ export default function Demandes() {
                 <strong className="text-bleu-nuit">
                   Souhaité :
                 </strong>{' '}
-                {d.date_souhaitee}{' '}
-                à{' '}
-                {d.heure_souhaitee}
+                {d.date_souhaitee} à {d.heure_souhaitee}
               </p>
             </div>
 
@@ -339,12 +364,14 @@ export default function Demandes() {
               {d.panne}
             </p>
 
-            {/* Photo */}
+            {/* ==================================================
+                PHOTO
+            =================================================== */}
             {d.photo_path && (
               <a
-                href={d.photo_path}
+                href={obtenirUrlPhoto(d.photo_path)}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-bleu-technique hover:text-bleu-nuit"
               >
                 <ImageIcon
@@ -564,4 +591,3 @@ export default function Demandes() {
     </>
   );
 }
-
