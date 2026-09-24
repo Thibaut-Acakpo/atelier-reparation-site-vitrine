@@ -1,45 +1,92 @@
 const express = require('express');
-const db = require('../../db');
+const db = require('../../db-postgres');
 const { ok } = require('../../utils/response');
 
 const router = express.Router();
 
 // GET /api/admin/dashboard — indicateurs clés pour la page d'accueil de l'espace admin.
-router.get('/', (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
-    const demandesNouvelles = db
-      .prepare(`SELECT COUNT(*) AS n FROM demandes_reparation WHERE statut_traitement = 'nouvelle'`)
-      .get().n;
-    const rendezVousEnAttente = db.prepare(`SELECT COUNT(*) AS n FROM rendez_vous WHERE statut = 'en_attente'`).get().n;
-    const reparationsEnCours = db
-      .prepare(
-        `SELECT COUNT(*) AS n FROM reparations r
-         JOIN statuts_reparation s ON s.id = r.statut_id
-         WHERE s.code NOT IN ('appareil_recupere','reparation_impossible','reparation_annulee')`
-      )
-      .get().n;
-    const avisEnAttente = db.prepare(`SELECT COUNT(*) AS n FROM avis WHERE statut = 'en_attente'`).get().n;
-    const contactsNonTraites = db.prepare(`SELECT COUNT(*) AS n FROM contacts WHERE traite = 0`).get().n;
-    const totalClients = db.prepare(`SELECT COUNT(*) AS n FROM clients`).get().n;
+    const demandesNouvellesResult = await db.query(`
+      SELECT COUNT(*) AS n
+      FROM demandes_reparation
+      WHERE statut_traitement = 'nouvelle'
+    `);
 
-    const dernieresDemandes = db
-      .prepare(
-        `SELECT d.id, d.panne, d.created_at, d.statut_traitement, c.nom_complet, a.type, a.marque, a.modele
-         FROM demandes_reparation d
-         JOIN clients c ON c.id = d.client_id
-         JOIN appareils a ON a.id = d.appareil_id
-         ORDER BY d.created_at DESC LIMIT 5`
+    const rendezVousEnAttenteResult = await db.query(`
+      SELECT COUNT(*) AS n
+      FROM rendez_vous
+      WHERE statut = 'en_attente'
+    `);
+
+    const reparationsEnCoursResult = await db.query(`
+      SELECT COUNT(*) AS n
+      FROM reparations r
+      JOIN statuts_reparation s
+        ON s.id = r.statut_id
+      WHERE s.code NOT IN (
+        'appareil_recupere',
+        'reparation_impossible',
+        'reparation_annulee'
       )
-      .all();
+    `);
+
+    const avisEnAttenteResult = await db.query(`
+      SELECT COUNT(*) AS n
+      FROM avis
+      WHERE statut = 'en_attente'
+    `);
+
+    const contactsNonTraitesResult = await db.query(`
+      SELECT COUNT(*) AS n
+      FROM contacts
+      WHERE traite = 0
+    `);
+
+    const totalClientsResult = await db.query(`
+      SELECT COUNT(*) AS n
+      FROM clients
+    `);
+
+    const dernieresDemandesResult = await db.query(`
+      SELECT
+        d.id,
+        d.panne,
+        d.created_at,
+        d.statut_traitement,
+        c.nom_complet,
+        a.type,
+        a.marque,
+        a.modele
+      FROM demandes_reparation d
+      JOIN clients c
+        ON c.id = d.client_id
+      JOIN appareils a
+        ON a.id = d.appareil_id
+      ORDER BY d.created_at DESC
+      LIMIT 5
+    `);
 
     return ok(res, {
-      demandes_nouvelles: demandesNouvelles,
-      rendez_vous_en_attente: rendezVousEnAttente,
-      reparations_en_cours: reparationsEnCours,
-      avis_en_attente: avisEnAttente,
-      contacts_non_traites: contactsNonTraites,
-      total_clients: totalClients,
-      dernieres_demandes: dernieresDemandes,
+      demandes_nouvelles: Number(
+        demandesNouvellesResult.rows[0].n
+      ),
+      rendez_vous_en_attente: Number(
+        rendezVousEnAttenteResult.rows[0].n
+      ),
+      reparations_en_cours: Number(
+        reparationsEnCoursResult.rows[0].n
+      ),
+      avis_en_attente: Number(
+        avisEnAttenteResult.rows[0].n
+      ),
+      contacts_non_traites: Number(
+        contactsNonTraitesResult.rows[0].n
+      ),
+      total_clients: Number(
+        totalClientsResult.rows[0].n
+      ),
+      dernieres_demandes: dernieresDemandesResult.rows,
     });
   } catch (err) {
     next(err);

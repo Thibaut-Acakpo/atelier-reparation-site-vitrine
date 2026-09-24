@@ -1,4 +1,5 @@
 const express = require('express');
+
 const { requireAuth, requireRole } = require('../../middleware/auth');
 
 const authRouter = require('./auth');

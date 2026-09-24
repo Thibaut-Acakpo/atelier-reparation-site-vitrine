@@ -1,36 +1,41 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const db = require('../db');
+const db = require('../db-postgres');
 const { ok, fail } = require('../utils/response');
 
 const router = express.Router();
 
-// Limite le nombre de recherches par IP pour empêcher l'énumération des
-// codes de suivi (voir section 18.1 du cahier des charges).
+// Limite le nombre de recherches par IP pour empêcher l'énumération
+// des codes de suivi.
 const suiviLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'Trop de recherches. Réessayez dans quelques minutes.', data: null, errors: [] },
+  message: {
+    success: false,
+    message: 'Trop de recherches. Réessayez dans quelques minutes.',
+    data: null,
+    errors: [],
+  },
 });
 
-const MESSAGE_NEUTRE = "Aucune réparation ne correspond à ce numéro. Vérifiez votre saisie ou contactez l'atelier.";
+const MESSAGE_NEUTRE =
+  "Aucune réparation ne correspond à ce numéro. Vérifiez votre saisie ou contactez l'atelier.";
 
 // GET /api/reparations/:numero
 // :numero est le code public (non énumérable), pas l'identifiant interne.
-router.get('/:numero', suiviLimiter, (req, res, next) => {
+router.get('/:numero', suiviLimiter, async (req, res, next) => {
   try {
     const codePublic = String(req.params.numero || '').trim();
 
     if (!codePublic || codePublic.length < 6 || codePublic.length > 40) {
-      // Message neutre : ne jamais indiquer si le format est "presque bon".
       return fail(res, MESSAGE_NEUTRE, 404, []);
     }
 
-    const row = db
-      .prepare(
-        `
+    // Récupération de la réparation
+    const result = await db.query(
+      `
       SELECT
         r.numero_fiche,
         r.description_statut,
@@ -45,57 +50,65 @@ router.get('/:numero', suiviLimiter, (req, res, next) => {
       FROM reparations r
       JOIN statuts_reparation s ON s.id = r.statut_id
       JOIN appareils a ON a.id = r.appareil_id
-      WHERE r.code_public = ? AND r.visible_publiquement = 1
-    `
-      )
-      .get(codePublic);
+      WHERE r.code_public = $1
+        AND r.visible_publiquement = 1
+      `,
+      [codePublic]
+    );
+
+    const row = result.rows[0];
 
     if (!row) {
-      // Même code et même structure de réponse qu'un vrai "non trouvé" :
-      // aucune fuite d'information sur l'existence ou non d'une fiche proche.
       return fail(res, MESSAGE_NEUTRE, 404, []);
     }
 
-    const historique = db
-      .prepare(
-        `
-      SELECT h.commentaire, h.created_at, s.libelle AS statut
+    // Historique de la réparation
+    const historiqueResult = await db.query(
+      `
+      SELECT
+        h.commentaire,
+        h.created_at,
+        s.libelle AS statut
       FROM historique_reparation h
       JOIN reparations rep ON rep.id = h.reparation_id
       JOIN statuts_reparation s ON s.id = h.statut_id
-      WHERE rep.code_public = ?
+      WHERE rep.code_public = $1
       ORDER BY h.created_at ASC
-    `
-      )
-      .all(codePublic);
+      `,
+      [codePublic]
+    );
 
-    const pieces = db
-      .prepare(
-        `
-      SELECT p.nom, rp.quantite
+    // Pièces remplacées
+    const piecesResult = await db.query(
+      `
+      SELECT
+        p.nom,
+        rp.quantite
       FROM reparation_pieces rp
       JOIN pieces p ON p.id = rp.piece_id
       JOIN reparations rep ON rep.id = rp.reparation_id
-      WHERE rep.code_public = ?
-    `
-      )
-      .all(codePublic);
+      WHERE rep.code_public = $1
+      `,
+      [codePublic]
+    );
 
     return ok(res, {
       numero_fiche: row.numero_fiche,
       statut: row.statut,
       description_statut: row.description_statut,
+
       appareil: {
         type: row.appareil_type,
         marque: row.appareil_marque,
         modele: row.appareil_modele,
       },
+
       diagnostic: row.diagnostic,
       cout: row.cout,
-      pieces_remplacees: pieces,
+      pieces_remplacees: piecesResult.rows,
       date_estimee_recuperation: row.date_estimee_recuperation,
       derniere_mise_a_jour: row.updated_at,
-      historique,
+      historique: historiqueResult.rows,
     });
   } catch (err) {
     next(err);

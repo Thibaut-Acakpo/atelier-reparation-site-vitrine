@@ -1,14 +1,18 @@
 const express = require('express');
-const db = require('../../db');
+const db = require('../../db-postgres');
 const { ok } = require('../../utils/response');
 
 const router = express.Router();
 
 // GET /api/admin/statuts — référentiel des statuts (section 11), utilisé
 // pour peupler les menus déroulants de l'espace admin.
-router.get('/', (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
-    return ok(res, db.prepare(`SELECT * FROM statuts_reparation ORDER BY ordre ASC`).all());
+    const result = await db.query(
+      `SELECT * FROM statuts_reparation ORDER BY ordre ASC`
+    );
+
+    return ok(res, result.rows);
   } catch (err) {
     next(err);
   }

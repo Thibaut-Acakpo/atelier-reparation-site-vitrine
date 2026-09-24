@@ -1,5 +1,5 @@
 const express = require('express');
-const db = require('../../db');
+const db = require('../../db-postgres');
 const { ok, fail } = require('../../utils/response');
 const { cleanText } = require('../../utils/validation');
 const { upload, verifyUploadedImage } = require('../../middleware/upload');
@@ -14,9 +14,13 @@ const photosFields = upload.fields([
 
 // GET /api/admin/realisations — inclut les réalisations non publiées.
 // Consultation ouverte aux deux rôles.
-router.get('/', (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
-    return ok(res, db.prepare(`SELECT * FROM realisations ORDER BY created_at DESC`).all());
+    const result = await db.query(
+      `SELECT * FROM realisations ORDER BY created_at DESC`
+    );
+
+    return ok(res, result.rows);
   } catch (err) {
     next(err);
   }
@@ -28,72 +32,183 @@ router.get('/', (req, res, next) => {
 // modifier.
 
 // POST /api/admin/realisations
-router.post('/', requireRole('technicien'), photosFields, verifyUploadedImage, (req, res, next) => {
-  try {
-    const data = {
-      titre: cleanText(req.body.titre || ''),
-      type_appareil: cleanText(req.body.type_appareil || ''),
-      marque: cleanText(req.body.marque || ''),
-      modele: cleanText(req.body.modele || ''),
-      probleme: cleanText(req.body.probleme || ''),
-      intervention: cleanText(req.body.intervention || ''),
-      publie: req.body.publie === 'false' ? 0 : 1,
-    };
-    if (!data.titre || !data.type_appareil || !data.probleme || !data.intervention) {
-      return fail(res, 'Titre, type d\u2019appareil, problème et intervention sont requis.', 422);
+router.post(
+  '/',
+  requireRole('technicien'),
+  photosFields,
+  verifyUploadedImage,
+  async (req, res, next) => {
+    try {
+      const data = {
+        titre: cleanText(req.body.titre || ''),
+        type_appareil: cleanText(req.body.type_appareil || ''),
+        marque: cleanText(req.body.marque || ''),
+        modele: cleanText(req.body.modele || ''),
+        probleme: cleanText(req.body.probleme || ''),
+        intervention: cleanText(req.body.intervention || ''),
+        publie: req.body.publie === 'false' ? 0 : 1,
+      };
+
+      if (
+        !data.titre ||
+        !data.type_appareil ||
+        !data.probleme ||
+        !data.intervention
+      ) {
+        return fail(
+          res,
+          'Titre, type d’appareil, problème et intervention sont requis.',
+          422
+        );
+      }
+
+      const imageAvant = req.files?.photo_avant?.[0]
+        ? `/uploads/${req.files.photo_avant[0].filename}`
+        : null;
+
+      const imageApres = req.files?.photo_apres?.[0]
+        ? `/uploads/${req.files.photo_apres[0].filename}`
+        : null;
+
+      const result = await db.query(
+        `INSERT INTO realisations (
+          titre,
+          type_appareil,
+          marque,
+          modele,
+          probleme,
+          intervention,
+          image_avant,
+          image_apres,
+          publie
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING id`,
+        [
+          data.titre,
+          data.type_appareil,
+          data.marque,
+          data.modele,
+          data.probleme,
+          data.intervention,
+          imageAvant,
+          imageApres,
+          data.publie,
+        ]
+      );
+
+      return ok(
+        res,
+        { id: result.rows[0].id },
+        'Réalisation ajoutée.',
+        201
+      );
+    } catch (err) {
+      next(err);
     }
-
-    const imageAvant = req.files?.photo_avant?.[0] ? `/uploads/${req.files.photo_avant[0].filename}` : null;
-    const imageApres = req.files?.photo_apres?.[0] ? `/uploads/${req.files.photo_apres[0].filename}` : null;
-
-    const result = db
-      .prepare(
-        `INSERT INTO realisations (titre, type_appareil, marque, modele, probleme, intervention, image_avant, image_apres, publie)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(data.titre, data.type_appareil, data.marque, data.modele, data.probleme, data.intervention, imageAvant, imageApres, data.publie);
-
-    return ok(res, { id: result.lastInsertRowid }, 'Réalisation ajoutée.', 201);
-  } catch (err) {
-    next(err);
   }
-});
+);
 
 // PATCH /api/admin/realisations/:id
-router.patch('/:id', requireRole('technicien'), photosFields, verifyUploadedImage, (req, res, next) => {
-  try {
-    const existant = db.prepare(`SELECT * FROM realisations WHERE id = ?`).get(req.params.id);
-    if (!existant) return fail(res, 'Réalisation introuvable.', 404);
+router.patch(
+  '/:id',
+  requireRole('technicien'),
+  photosFields,
+  verifyUploadedImage,
+  async (req, res, next) => {
+    try {
+      const existant = await db.query(
+        `SELECT * FROM realisations WHERE id = $1`,
+        [req.params.id]
+      );
 
-    const champsTexte = ['titre', 'type_appareil', 'marque', 'modele', 'probleme', 'intervention'];
-    const updates = {};
-    champsTexte.forEach((champ) => {
-      if (req.body[champ] !== undefined) updates[champ] = cleanText(req.body[champ]);
-    });
-    if (req.body.publie !== undefined) updates.publie = req.body.publie === 'false' || req.body.publie === false ? 0 : 1;
-    if (req.files?.photo_avant?.[0]) updates.image_avant = `/uploads/${req.files.photo_avant[0].filename}`;
-    if (req.files?.photo_apres?.[0]) updates.image_apres = `/uploads/${req.files.photo_apres[0].filename}`;
+      if (existant.rowCount === 0) {
+        return fail(res, 'Réalisation introuvable.', 404);
+      }
 
-    const cles = Object.keys(updates);
-    if (cles.length === 0) return fail(res, 'Aucune modification fournie.', 422);
+      const champsTexte = [
+        'titre',
+        'type_appareil',
+        'marque',
+        'modele',
+        'probleme',
+        'intervention',
+      ];
 
-    const setClause = cles.map((k) => `${k} = ?`).join(', ');
-    db.prepare(`UPDATE realisations SET ${setClause} WHERE id = ?`).run(...cles.map((k) => updates[k]), req.params.id);
+      const updates = {};
 
-    return ok(res, db.prepare(`SELECT * FROM realisations WHERE id = ?`).get(req.params.id), 'Réalisation mise à jour.');
-  } catch (err) {
-    next(err);
+      champsTexte.forEach((champ) => {
+        if (req.body[champ] !== undefined) {
+          updates[champ] = cleanText(req.body[champ]);
+        }
+      });
+
+      if (req.body.publie !== undefined) {
+        updates.publie =
+          req.body.publie === 'false' || req.body.publie === false ? 0 : 1;
+      }
+
+      if (req.files?.photo_avant?.[0]) {
+        updates.image_avant =
+          `/uploads/${req.files.photo_avant[0].filename}`;
+      }
+
+      if (req.files?.photo_apres?.[0]) {
+        updates.image_apres =
+          `/uploads/${req.files.photo_apres[0].filename}`;
+      }
+
+      const cles = Object.keys(updates);
+
+      if (cles.length === 0) {
+        return fail(res, 'Aucune modification fournie.', 422);
+      }
+
+      const valeurs = cles.map((cle) => updates[cle]);
+
+      const setClause = cles
+        .map((cle, index) => `${cle} = $${index + 1}`)
+        .join(', ');
+
+      await db.query(
+        `UPDATE realisations
+         SET ${setClause}
+         WHERE id = $${valeurs.length + 1}`,
+        [...valeurs, req.params.id]
+      );
+
+      const updated = await db.query(
+        `SELECT * FROM realisations WHERE id = $1`,
+        [req.params.id]
+      );
+
+      return ok(
+        res,
+        updated.rows[0],
+        'Réalisation mise à jour.'
+      );
+    } catch (err) {
+      next(err);
+    }
   }
-});
+);
 
 // DELETE /api/admin/realisations/:id
-router.delete('/:id', requireRole('technicien'), (req, res, next) => {
-  try {
-    db.prepare(`DELETE FROM realisations WHERE id = ?`).run(req.params.id);
-    return ok(res, null, 'Réalisation supprimée.');
-  } catch (err) {
-    next(err);
+router.delete(
+  '/:id',
+  requireRole('technicien'),
+  async (req, res, next) => {
+    try {
+      await db.query(
+        `DELETE FROM realisations WHERE id = $1`,
+        [req.params.id]
+      );
+
+      return ok(res, null, 'Réalisation supprimée.');
+    } catch (err) {
+      next(err);
+    }
   }
-});
+);
 
 module.exports = router;

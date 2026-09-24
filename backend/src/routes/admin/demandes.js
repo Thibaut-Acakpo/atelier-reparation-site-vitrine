@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const db = require('../../db');
+const db = require('../../db-postgres');
 const { ok, fail } = require('../../utils/response');
 const { cleanText } = require('../../utils/validation');
 const {
@@ -22,7 +22,7 @@ const STATUTS_TRAITEMENT = [
 // GET /api/admin/demandes
 // Liste toutes les demandes de réparation
 // ============================================================
-router.get('/', (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
     const { statut } = req.query;
 
@@ -43,15 +43,15 @@ router.get('/', (req, res, next) => {
     const params = [];
 
     if (statut && STATUTS_TRAITEMENT.includes(statut)) {
-      query += ` WHERE d.statut_traitement = ?`;
+      query += ` WHERE d.statut_traitement = $1`;
       params.push(statut);
     }
 
     query += ` ORDER BY d.created_at DESC`;
 
-    const rows = db.prepare(query).all(...params);
+    const result = await db.query(query, params);
 
-    return ok(res, rows);
+    return ok(res, result.rows);
   } catch (err) {
     next(err);
   }
@@ -61,26 +61,27 @@ router.get('/', (req, res, next) => {
 // GET /api/admin/demandes/:id
 // Afficher une demande précise
 // ============================================================
-router.get('/:id', (req, res, next) => {
+router.get('/:id', async (req, res, next) => {
   try {
-    const row = db
-      .prepare(
-        `
-        SELECT
-          d.*,
-          c.nom_complet,
-          c.telephone,
-          c.email,
-          a.type,
-          a.marque,
-          a.modele
-        FROM demandes_reparation d
-        JOIN clients c ON c.id = d.client_id
-        JOIN appareils a ON a.id = d.appareil_id
-        WHERE d.id = ?
-        `
-      )
-      .get(req.params.id);
+    const result = await db.query(
+      `
+      SELECT
+        d.*,
+        c.nom_complet,
+        c.telephone,
+        c.email,
+        a.type,
+        a.marque,
+        a.modele
+      FROM demandes_reparation d
+      JOIN clients c ON c.id = d.client_id
+      JOIN appareils a ON a.id = d.appareil_id
+      WHERE d.id = $1
+      `,
+      [req.params.id]
+    );
+
+    const row = result.rows[0];
 
     if (!row) {
       return fail(res, 'Demande introuvable.', 404);
@@ -96,7 +97,7 @@ router.get('/:id', (req, res, next) => {
 // PATCH /api/admin/demandes/:id
 // Modifier le statut de traitement de la demande
 // ============================================================
-router.patch('/:id', (req, res, next) => {
+router.patch('/:id', async (req, res, next) => {
   try {
     const statut = cleanText(
       req.body.statut_traitement || ''
@@ -111,17 +112,17 @@ router.patch('/:id', (req, res, next) => {
       );
     }
 
-    const result = db
-      .prepare(
-        `
-        UPDATE demandes_reparation
-        SET statut_traitement = ?
-        WHERE id = ?
-        `
-      )
-      .run(statut, req.params.id);
+    const result = await db.query(
+      `
+      UPDATE demandes_reparation
+      SET statut_traitement = $1
+      WHERE id = $2
+      RETURNING id
+      `,
+      [statut, req.params.id]
+    );
 
-    if (result.changes === 0) {
+    if (result.rowCount === 0) {
       return fail(res, 'Demande introuvable.', 404);
     }
 
@@ -135,33 +136,43 @@ router.patch('/:id', (req, res, next) => {
 // POST /api/admin/demandes/:id/convertir
 // Convertir une demande en fiche de réparation
 // ============================================================
-router.post('/:id/convertir', (req, res, next) => {
+router.post('/:id/convertir', async (req, res, next) => {
+  const client = await db.connect();
+
   try {
-    const demande = db
-      .prepare(
-        `
-        SELECT *
-        FROM demandes_reparation
-        WHERE id = ?
-        `
-      )
-      .get(req.params.id);
+    await client.query('BEGIN');
+
+    const demandeResult = await client.query(
+      `
+      SELECT *
+      FROM demandes_reparation
+      WHERE id = $1
+      FOR UPDATE
+      `,
+      [req.params.id]
+    );
+
+    const demande = demandeResult.rows[0];
 
     if (!demande) {
+      await client.query('ROLLBACK');
       return fail(res, 'Demande introuvable.', 404);
     }
 
-    const dejaConvertie = db
-      .prepare(
-        `
-        SELECT id
-        FROM reparations
-        WHERE demande_id = ?
-        `
-      )
-      .get(demande.id);
+    const dejaConvertieResult = await client.query(
+      `
+      SELECT id
+      FROM reparations
+      WHERE demande_id = $1
+      `,
+      [demande.id]
+    );
+
+    const dejaConvertie = dejaConvertieResult.rows[0];
 
     if (dejaConvertie) {
+      await client.query('ROLLBACK');
+
       return fail(
         res,
         'Cette demande a déjà été convertie en fiche de réparation.',
@@ -169,18 +180,20 @@ router.post('/:id/convertir', (req, res, next) => {
       );
     }
 
-    const premierStatut = db
-      .prepare(
-        `
-        SELECT id, code
-        FROM statuts_reparation
-        ORDER BY ordre ASC
-        LIMIT 1
-        `
-      )
-      .get();
+    const premierStatutResult = await client.query(
+      `
+      SELECT id, code
+      FROM statuts_reparation
+      ORDER BY ordre ASC
+      LIMIT 1
+      `
+    );
+
+    const premierStatut = premierStatutResult.rows[0];
 
     if (!premierStatut) {
+      await client.query('ROLLBACK');
+
       return fail(
         res,
         "Aucun statut n'est configuré. Lancez le seed des statuts.",
@@ -190,47 +203,45 @@ router.post('/:id/convertir', (req, res, next) => {
 
     const codePublic = generateCodePublic();
 
-    const insertion = db
-      .prepare(
-        `
-        INSERT INTO reparations
-        (
-          numero_fiche,
-          code_public,
-          client_id,
-          appareil_id,
-          demande_id,
-          statut_id,
-          visible_publiquement
-        )
-        VALUES (?, ?, ?, ?, ?, ?, 1)
-        `
+    const insertionResult = await client.query(
+      `
+      INSERT INTO reparations
+      (
+        numero_fiche,
+        code_public,
+        client_id,
+        appareil_id,
+        demande_id,
+        statut_id,
+        visible_publiquement
       )
-      .run(
+      VALUES ($1, $2, $3, $4, $5, $6, 1)
+      RETURNING id
+      `,
+      [
         'TEMP',
         codePublic,
         demande.client_id,
         demande.appareil_id,
         demande.id,
-        premierStatut.id
-      );
-
-    const numeroFiche = generateNumeroFiche(
-      insertion.lastInsertRowid
+        premierStatut.id,
+      ]
     );
 
-    db.prepare(
+    const reparationId = insertionResult.rows[0].id;
+
+    const numeroFiche = generateNumeroFiche(reparationId);
+
+    await client.query(
       `
       UPDATE reparations
-      SET numero_fiche = ?
-      WHERE id = ?
-      `
-    ).run(
-      numeroFiche,
-      insertion.lastInsertRowid
+      SET numero_fiche = $1
+      WHERE id = $2
+      `,
+      [numeroFiche, reparationId]
     );
 
-    db.prepare(
+    await client.query(
       `
       INSERT INTO historique_reparation
       (
@@ -238,26 +249,30 @@ router.post('/:id/convertir', (req, res, next) => {
         statut_id,
         commentaire
       )
-      VALUES (?, ?, ?)
-      `
-    ).run(
-      insertion.lastInsertRowid,
-      premierStatut.id,
-      'Fiche créée à partir de la demande en ligne.'
+      VALUES ($1, $2, $3)
+      `,
+      [
+        reparationId,
+        premierStatut.id,
+        'Fiche créée à partir de la demande en ligne.',
+      ]
     );
 
-    db.prepare(
+    await client.query(
       `
       UPDATE demandes_reparation
       SET statut_traitement = 'convertie'
-      WHERE id = ?
-      `
-    ).run(demande.id);
+      WHERE id = $1
+      `,
+      [demande.id]
+    );
+
+    await client.query('COMMIT');
 
     return ok(
       res,
       {
-        id: insertion.lastInsertRowid,
+        id: reparationId,
         numero_fiche: numeroFiche,
         code_public: codePublic,
       },
@@ -265,7 +280,15 @@ router.post('/:id/convertir', (req, res, next) => {
       201
     );
   } catch (err) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      // Rien à faire si le rollback échoue.
+    }
+
     next(err);
+  } finally {
+    client.release();
   }
 });
 
@@ -279,118 +302,125 @@ router.post('/:id/convertir', (req, res, next) => {
 // L'historique et les pièces liées à la réparation sont supprimés
 // automatiquement grâce aux ON DELETE CASCADE de la base.
 // ============================================================
-router.delete('/:id', (req, res, next) => {
+router.delete('/:id', async (req, res, next) => {
+  const client = await db.connect();
+
   try {
-    const demande = db
-      .prepare(
-        `
-        SELECT *
-        FROM demandes_reparation
-        WHERE id = ?
-        `
-      )
-      .get(req.params.id);
+    const demandeResult = await client.query(
+      `
+      SELECT *
+      FROM demandes_reparation
+      WHERE id = $1
+      `,
+      [req.params.id]
+    );
+
+    const demande = demandeResult.rows[0];
 
     if (!demande) {
+      client.release();
       return fail(res, 'Demande introuvable.', 404);
     }
 
     // Chercher les éventuelles fiches de réparation liées.
-    const reparations = db
-      .prepare(
-        `
-        SELECT id
-        FROM reparations
-        WHERE demande_id = ?
-        `
-      )
-      .all(demande.id);
+    const reparationsResult = await client.query(
+      `
+      SELECT id
+      FROM reparations
+      WHERE demande_id = $1
+      `,
+      [demande.id]
+    );
+
+    const reparations = reparationsResult.rows;
 
     // ----------------------------------------------------------
-    // Début de la transaction SQLite.
-    //
-    // Avec node:sqlite, DatabaseSync ne possède pas
-    // db.transaction() comme better-sqlite3.
-    // On utilise donc BEGIN / COMMIT / ROLLBACK.
+    // Début de la transaction PostgreSQL.
+    // Toutes les suppressions doivent utiliser le même client.
     // ----------------------------------------------------------
-    db.exec('BEGIN');
+    await client.query('BEGIN');
 
     try {
       // --------------------------------------------------------
       // 1. Supprimer les fiches de réparation liées
       // --------------------------------------------------------
       for (const reparation of reparations) {
-        db.prepare(
+        await client.query(
           `
           DELETE FROM reparations
-          WHERE id = ?
-          `
-        ).run(reparation.id);
+          WHERE id = $1
+          `,
+          [reparation.id]
+        );
       }
 
       // --------------------------------------------------------
       // 2. Supprimer la demande
       // --------------------------------------------------------
-      db.prepare(
+      await client.query(
         `
         DELETE FROM demandes_reparation
-        WHERE id = ?
-        `
-      ).run(demande.id);
+        WHERE id = $1
+        `,
+        [demande.id]
+      );
 
       // --------------------------------------------------------
       // 3. Vérifier si le client est encore utilisé ailleurs
       // --------------------------------------------------------
-      const clientUtilise = db
-        .prepare(
-          `
-          SELECT 1
-          FROM demandes_reparation
-          WHERE client_id = ?
+      const clientUtiliseResult = await client.query(
+        `
+        SELECT 1
+        FROM demandes_reparation
+        WHERE client_id = $1
 
-          UNION
+        UNION
 
-          SELECT 1
-          FROM reparations
-          WHERE client_id = ?
+        SELECT 1
+        FROM reparations
+        WHERE client_id = $2
 
-          UNION
+        UNION
 
-          SELECT 1
-          FROM rendez_vous
-          WHERE client_id = ?
+        SELECT 1
+        FROM rendez_vous
+        WHERE client_id = $3
 
-          LIMIT 1
-          `
-        )
-        .get(
+        LIMIT 1
+        `,
+        [
           demande.client_id,
           demande.client_id,
-          demande.client_id
-        );
+          demande.client_id,
+        ]
+      );
+
+      const clientUtilise =
+        clientUtiliseResult.rows.length > 0;
 
       // --------------------------------------------------------
       // 4. Supprimer le client s'il n'est plus utilisé
       // --------------------------------------------------------
       if (!clientUtilise) {
-        db.prepare(
+        await client.query(
           `
           DELETE FROM clients
-          WHERE id = ?
-          `
-        ).run(demande.client_id);
+          WHERE id = $1
+          `,
+          [demande.client_id]
+        );
       }
 
       // --------------------------------------------------------
       // 5. Valider la transaction
       // --------------------------------------------------------
-      db.exec('COMMIT');
+      await client.query('COMMIT');
     } catch (transactionError) {
       // --------------------------------------------------------
       // En cas d'erreur, annuler toutes les suppressions.
       // --------------------------------------------------------
       try {
-        db.exec('ROLLBACK');
+        await client.query('ROLLBACK');
       } catch {
         // Rien à faire si le rollback échoue.
       }
@@ -438,7 +468,15 @@ router.delete('/:id', (req, res, next) => {
       'Demande supprimée.'
     );
   } catch (err) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      // Rien à faire si le rollback échoue.
+    }
+
     next(err);
+  } finally {
+    client.release();
   }
 });
 

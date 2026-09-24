@@ -1,6 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const db = require('../db');
+const db = require('../db-postgres');
 const { ok, fail } = require('../utils/response');
 const { validateContact } = require('../utils/validation');
 
@@ -11,29 +11,58 @@ const contactLimiter = rateLimit({
   max: 15,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'Trop de messages envoyés. Réessayez plus tard.', data: null, errors: [] },
+  message: {
+    success: false,
+    message: 'Trop de messages envoyés. Réessayez plus tard.',
+    data: null,
+    errors: [],
+  },
 });
 
 // POST /api/contact
-router.post('/', contactLimiter, (req, res, next) => {
+router.post('/', contactLimiter, async (req, res, next) => {
   try {
-    // Honeypot anti-spam simple : un champ caché côté frontend, invisible pour
-    // un humain, mais souvent rempli automatiquement par les robots.
+    // Honeypot anti-spam simple
     if (req.body.site_web) {
       return ok(res, null, 'Message envoyé.', 201);
     }
 
     const { valid, errors, data } = validateContact(req.body);
+
     if (!valid) {
-      return fail(res, 'Certains champs sont invalides ou manquants.', 422, errors);
+      return fail(
+        res,
+        'Certains champs sont invalides ou manquants.',
+        422,
+        errors
+      );
     }
 
-    const insert = db.prepare(`
-      INSERT INTO contacts (nom, email, telephone, sujet, message) VALUES (?, ?, ?, ?, ?)
-    `);
-    const result = insert.run(data.nom, data.email, data.telephone, data.sujet, data.message);
+    const result = await db.query(
+      `
+      INSERT INTO contacts
+        (nom, email, telephone, sujet, message)
+      VALUES
+        ($1, $2, $3, $4, $5)
+      RETURNING id
+      `,
+      [
+        data.nom,
+        data.email,
+        data.telephone,
+        data.sujet,
+        data.message,
+      ]
+    );
 
-    return ok(res, { id: result.lastInsertRowid }, 'Votre message a bien été envoyé.', 201);
+    const contactId = result.rows[0].id;
+
+    return ok(
+      res,
+      { id: contactId },
+      'Votre message a bien été envoyé.',
+      201
+    );
   } catch (err) {
     next(err);
   }
