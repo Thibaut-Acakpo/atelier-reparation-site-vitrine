@@ -114,9 +114,8 @@ export default function Realisations() {
   useEffect(charger, []);
 
   const supprimer = async (id) => {
-    if (!window.confirm('Supprimer cette réalisation ?')) return;
-    await adminApi.supprimerRealisation(id);
-    charger();
+    const res = await adminApi.supprimerRealisation(id);
+    if (res.success) charger();
   };
 
   const fermerFormulaire = () => {

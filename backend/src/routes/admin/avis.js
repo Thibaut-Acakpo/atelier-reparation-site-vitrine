@@ -8,6 +8,7 @@ const router = express.Router();
 
 // GET /api/admin/avis?statut=en_attente
 // Consultation ouverte aux deux rôles.
+// Les avis sont limités à l'atelier connecté.
 router.get('/', async (req, res, next) => {
   try {
     const { statut } = req.query;
@@ -15,15 +16,16 @@ router.get('/', async (req, res, next) => {
     let query = `
       SELECT *
       FROM avis
+      WHERE atelier_id = $1
     `;
 
-    const params = [];
+    const params = [req.admin.atelier_id];
 
     if (
       statut &&
       ['en_attente', 'valide', 'refuse'].includes(statut)
     ) {
-      query += ` WHERE statut = $1`;
+      query += ` AND statut = $2`;
       params.push(statut);
     }
 
@@ -39,6 +41,7 @@ router.get('/', async (req, res, next) => {
 
 // PATCH /api/admin/avis/:id
 // Seul le technicien peut valider ou refuser un avis.
+// L'avis doit appartenir à l'atelier connecté.
 router.patch(
   '/:id',
   requireRole('technicien'),
@@ -60,9 +63,14 @@ router.patch(
         UPDATE avis
         SET statut = $1
         WHERE id = $2
+          AND atelier_id = $3
         RETURNING id
         `,
-        [statut, req.params.id]
+        [
+          statut,
+          req.params.id,
+          req.admin.atelier_id,
+        ]
       );
 
       if (result.rowCount === 0) {
@@ -77,6 +85,8 @@ router.patch(
 );
 
 // DELETE /api/admin/avis/:id
+// Seul le technicien peut supprimer un avis.
+// L'avis doit appartenir à l'atelier connecté.
 router.delete(
   '/:id',
   requireRole('technicien'),
@@ -86,9 +96,13 @@ router.delete(
         `
         DELETE FROM avis
         WHERE id = $1
+          AND atelier_id = $2
         RETURNING id
         `,
-        [req.params.id]
+        [
+          req.params.id,
+          req.admin.atelier_id,
+        ]
       );
 
       if (result.rowCount === 0) {

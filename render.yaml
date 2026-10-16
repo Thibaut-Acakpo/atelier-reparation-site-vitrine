@@ -1,3 +1,10 @@
+# Blueprint Render : base PostgreSQL + API + frontend statique.
+# Les ateliers (clients) se créent ensuite depuis /gestion, sans nouveau déploiement.
+
+databases:
+  - name: atelier-reparation-db
+    plan: free
+
 services:
   - type: web
     name: atelier-reparation-backend
@@ -11,6 +18,10 @@ services:
       - key: NODE_VERSION
         value: 22.20.0
 
+      - key: NODE_ENV
+        value: production
+
+      # URL du frontend déployé (ex. https://atelier-reparation.onrender.com)
       - key: FRONTEND_URL
         sync: false
 
@@ -34,20 +45,15 @@ services:
       - key: MAX_UPLOAD_SIZE
         value: "5242880"
 
-      - key: ATELIER_NAME
-        value: "Atelier de réparation électronique"
-
-      - key: ADMIN_EMAIL
+      # Votre compte développeur (créé automatiquement au premier démarrage)
+      - key: DEVELOPER_EMAIL
         sync: false
 
-      - key: ADMIN_PASSWORD
+      - key: DEVELOPER_PASSWORD
         sync: false
 
-      - key: ASSISTANT_EMAIL
-        sync: false
-
-      - key: ASSISTANT_PASSWORD
-        sync: false
+      - key: DEVELOPER_NAME
+        value: Développeur
 
   - type: web
     name: atelier-reparation
@@ -62,5 +68,6 @@ services:
         destination: /index.html
 
     envVars:
+      # URL de l'API (ex. https://atelier-reparation-backend.onrender.com)
       - key: VITE_API_URL
         sync: false

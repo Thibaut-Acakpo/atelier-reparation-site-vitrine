@@ -107,9 +107,8 @@ export default function Contenu() {
   }, [type]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const supprimer = async (id) => {
-    if (!window.confirm('Supprimer cet élément ?')) return;
-    await adminApi.contenu.supprimer(type, id);
-    charger();
+    const res = await adminApi.contenu.supprimer(type, id);
+    if (res.success) charger();
   };
 
   const config = TYPES[type];

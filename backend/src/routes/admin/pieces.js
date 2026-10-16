@@ -6,11 +6,21 @@ const { requireRole } = require('../../middleware/auth');
 
 const router = express.Router();
 
-// GET /api/admin/pieces — consultation ouverte aux deux rôles.
+// ============================================================
+// GET /api/admin/pieces
+// Consultation ouverte aux deux rôles.
+// Uniquement les pièces de l'atelier connecté.
+// ============================================================
 router.get('/', async (req, res, next) => {
   try {
     const result = await db.query(
-      `SELECT * FROM pieces ORDER BY nom ASC`
+      `
+      SELECT *
+      FROM pieces
+      WHERE atelier_id = $1
+      ORDER BY nom ASC
+      `,
+      [req.admin.atelier_id]
     );
 
     return ok(res, result.rows);
@@ -19,23 +29,45 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// POST /api/admin/pieces — ajouter une pièce au catalogue.
-// Ouvert aux deux rôles : l'Assistant technicien doit pouvoir ajouter une
-// pièce qu'il vient d'utiliser, sans attendre le gérant.
+// ============================================================
+// POST /api/admin/pieces
+// Ajouter une pièce au catalogue de l'atelier connecté.
+// ============================================================
 router.post('/', async (req, res, next) => {
   try {
-    const nom = cleanText(req.body.nom || '');
-    const reference = cleanText(req.body.reference || '') || null;
+    const nom = cleanText(
+      req.body.nom || ''
+    );
+
+    const reference =
+      cleanText(
+        req.body.reference || ''
+      ) || null;
 
     if (!nom) {
-      return fail(res, 'Le nom de la pièce est requis.', 422, ['nom']);
+      return fail(
+        res,
+        'Le nom de la pièce est requis.',
+        422,
+        ['nom']
+      );
     }
 
     const result = await db.query(
-      `INSERT INTO pieces (nom, reference)
-       VALUES ($1, $2)
-       RETURNING id`,
-      [nom, reference]
+      `
+      INSERT INTO pieces (
+        nom,
+        reference,
+        atelier_id
+      )
+      VALUES ($1, $2, $3)
+      RETURNING id
+      `,
+      [
+        nom,
+        reference,
+        req.admin.atelier_id,
+      ]
     );
 
     return ok(
@@ -44,6 +76,8 @@ router.post('/', async (req, res, next) => {
         id: result.rows[0].id,
         nom,
         reference,
+        atelier_id:
+          req.admin.atelier_id,
       },
       'Pièce ajoutée au catalogue.',
       201
@@ -53,20 +87,46 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-// DELETE /api/admin/pieces/:id — suppression réservée au compte "Technicien"
-// pour éviter qu'une pièce encore utilisée sur d'anciennes fiches ne soit
-// retirée par erreur par le compte partagé.
-router.delete('/:id', requireRole('technicien'), async (req, res, next) => {
-  try {
-    await db.query(
-      `DELETE FROM pieces WHERE id = $1`,
-      [req.params.id]
-    );
+// ============================================================
+// DELETE /api/admin/pieces/:id
+// Suppression réservée au compte Technicien.
+// La pièce doit appartenir à l'atelier connecté.
+// ============================================================
+router.delete(
+  '/:id',
+  requireRole('technicien'),
+  async (req, res, next) => {
+    try {
+      const result = await db.query(
+        `
+        DELETE FROM pieces
+        WHERE id = $1
+          AND atelier_id = $2
+        RETURNING id
+        `,
+        [
+          req.params.id,
+          req.admin.atelier_id,
+        ]
+      );
 
-    return ok(res, null, 'Pièce supprimée du catalogue.');
-  } catch (err) {
-    next(err);
+      if (result.rowCount === 0) {
+        return fail(
+          res,
+          'Pièce introuvable.',
+          404
+        );
+      }
+
+      return ok(
+        res,
+        null,
+        'Pièce supprimée du catalogue.'
+      );
+    } catch (err) {
+      next(err);
+    }
   }
-});
+);
 
 module.exports = router;

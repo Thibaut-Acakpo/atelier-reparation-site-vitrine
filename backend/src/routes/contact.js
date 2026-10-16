@@ -27,7 +27,8 @@ router.post('/', contactLimiter, async (req, res, next) => {
       return ok(res, null, 'Message envoyé.', 201);
     }
 
-    const { valid, errors, data } = validateContact(req.body);
+    const { valid, errors, data } =
+      validateContact(req.body);
 
     if (!valid) {
       return fail(
@@ -38,12 +39,21 @@ router.post('/', contactLimiter, async (req, res, next) => {
       );
     }
 
+    const atelierId = req.atelier.id;
+
     const result = await db.query(
       `
       INSERT INTO contacts
-        (nom, email, telephone, sujet, message)
+        (
+          nom,
+          email,
+          telephone,
+          sujet,
+          message,
+          atelier_id
+        )
       VALUES
-        ($1, $2, $3, $4, $5)
+        ($1, $2, $3, $4, $5, $6)
       RETURNING id
       `,
       [
@@ -52,6 +62,7 @@ router.post('/', contactLimiter, async (req, res, next) => {
         data.telephone,
         data.sujet,
         data.message,
+        atelierId,
       ]
     );
 

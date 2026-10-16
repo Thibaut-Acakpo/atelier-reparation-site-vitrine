@@ -49,12 +49,14 @@ export default function RendezVousAdmin() {
   useEffect(charger, [onglet]);
 
   const changerStatut = async (id, statut) => {
-    await adminApi.majRendezVous(id, { statut });
+    const res = await adminApi.majRendezVous(id, { statut });
+    if (!res.success) return;
     charger();
   };
 
   const proposerCreneau = async (id, date_souhaitee, heure_souhaitee) => {
-    await adminApi.majRendezVous(id, { statut: 'modifie', date_souhaitee, heure_souhaitee });
+    const res = await adminApi.majRendezVous(id, { statut: 'modifie', date_souhaitee, heure_souhaitee });
+    if (!res.success) return;
     setEditionId(null);
     charger();
   };

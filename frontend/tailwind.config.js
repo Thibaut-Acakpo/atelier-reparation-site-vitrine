@@ -4,13 +4,16 @@ export default {
   theme: {
     extend: {
       colors: {
-  'bleu-nuit': '#0A1B33',       // bleu nuit très sombre — autorité
-  'bleu-technique': '#0F2E5C',  // bleu marine sombre — couleur principale
-  'bleu-clair': '#1B4F8A',      // bleu moyen sombre — accents
-  'or-discret': '#C4972D',      // or discret inchangé
-  'gris-clair': '#F1F5F8',
-  'gris-texte': '#606973',
-},
+        // Les 4 couleurs de marque suivent l'« Apparence » réglée dans /gestion
+        // (variables --c-* posées par AtelierContext). Les valeurs ci-dessous
+        // sont celles d'origine, utilisées tant qu'aucune couleur n'est définie.
+        'bleu-nuit': 'rgb(var(--c-nuit, 10 27 51) / <alpha-value>)',
+        'bleu-technique': 'rgb(var(--c-technique, 15 46 92) / <alpha-value>)',
+        'bleu-clair': 'rgb(var(--c-clair, 27 79 138) / <alpha-value>)',
+        'or-discret': 'rgb(var(--c-or, 196 151 45) / <alpha-value>)',
+        'gris-clair': '#F1F5F8',
+        'gris-texte': '#606973',
+      },
       fontFamily: {
         titre: ['Manrope', 'Inter', 'system-ui', 'sans-serif'],
         texte: ['Inter', 'system-ui', 'sans-serif'],

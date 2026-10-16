@@ -8,6 +8,8 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const { nanoid } = require('nanoid');
+const db = require('../db-postgres');
+const { fail } = require('../utils/response');
 
 const UPLOAD_DIR = path.resolve(__dirname, '../../', process.env.UPLOAD_DIR || './uploads');
 const MAX_UPLOAD_SIZE = parseInt(process.env.MAX_UPLOAD_SIZE || '5242880', 10);
@@ -73,4 +75,50 @@ function verifyUploadedImage(req, res, next) {
   }
 }
 
-module.exports = { upload, verifyUploadedImage, UPLOAD_DIR };
+async function serveActiveAtelierUpload(req, res, next) {
+  const filename = String(req.params.filename || '');
+  if (!filename || path.basename(filename) !== filename) {
+    return fail(res, 'Fichier introuvable.', 404);
+  }
+
+  try {
+    const imagePath = `/uploads/${filename}`;
+    const result = await db.query(
+      `SELECT 1
+       FROM ateliers a
+       WHERE a.actif = 1
+         AND a.id IN (
+           SELECT atelier_id
+           FROM demandes_reparation
+           WHERE photo_path = $1
+           UNION
+           SELECT atelier_id
+           FROM realisations
+           WHERE image_avant = $1 OR image_apres = $1
+         )
+       LIMIT 1`,
+      [imagePath]
+    );
+
+    if (result.rowCount === 0) {
+      return fail(res, 'Fichier introuvable.', 404);
+    }
+
+    return res.sendFile(filename, { root: UPLOAD_DIR }, (err) => {
+      if (!err) return;
+      if (err.statusCode === 404) {
+        return fail(res, 'Fichier introuvable.', 404);
+      }
+      return next(err);
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+module.exports = {
+  upload,
+  verifyUploadedImage,
+  serveActiveAtelierUpload,
+  UPLOAD_DIR,
+};

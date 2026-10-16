@@ -1,7 +1,9 @@
 // Client API de l'espace administrateur. Ajoute automatiquement le jeton
 // d'authentification stocké après connexion.
 
-const BASE_URL = import.meta.env.VITE_API_URL || '';
+import { API_BASE as BASE_URL } from '../data/config';
+import { tenantHeaders } from '../data/tenant';
+import { confirmerMutation } from '../gestion/components/ui';
 const TOKEN_KEY = 'admin_token';
 
 export function getToken() {
@@ -15,6 +17,19 @@ export function clearToken() {
 }
 
 async function request(path, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+  const demandeDejaConfirmee =
+    method === 'DELETE' && /^\/demandes\/[^/]+$/.test(path);
+  if (method !== 'GET' && path !== '/auth/login' && !demandeDejaConfirmee) {
+    const body = typeof options.body === 'string'
+      ? (() => { try { return JSON.parse(options.body); } catch { return undefined; } })()
+      : options.body;
+    const confirme = await confirmerMutation(method, path, body);
+    if (!confirme) {
+      return { httpStatus: 0, success: false, cancelled: true, message: '', data: null, errors: [] };
+    }
+  }
+
   const token = getToken();
   const isFormData = options.body instanceof FormData;
 
@@ -22,6 +37,7 @@ async function request(path, options = {}) {
     ...options,
     headers: {
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      ...tenantHeaders(),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
@@ -36,6 +52,19 @@ async function request(path, options = {}) {
 
   if (response.status === 401) {
     clearToken();
+  }
+
+  const hasInlineErrorMessage =
+    /\/demandes\/[^/]+(?:\/convertir)?$/.test(path) ||
+    /^\/reparations\/[^/]+$/.test(path) ||
+    (method !== 'DELETE' && (
+      /\/contenu\//.test(path) ||
+      /^\/realisations(?:\/[^/]+)?$/.test(path)
+    ));
+  if (method !== 'GET' && !payload.success && !hasInlineErrorMessage) {
+      window.dispatchEvent(new CustomEvent('app-toast', {
+        detail: { type: 'erreur', message: payload.message || 'Opération impossible.' },
+      }));
   }
 
   return { httpStatus: response.status, ...payload };

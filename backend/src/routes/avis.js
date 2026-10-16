@@ -37,18 +37,27 @@ router.post('/', avisLimiter, async (req, res, next) => {
       );
     }
 
+    const atelierId = req.atelier.id;
+
     const result = await db.query(
       `
       INSERT INTO avis
-        (nom, note, commentaire, statut)
+        (
+          nom,
+          note,
+          commentaire,
+          statut,
+          atelier_id
+        )
       VALUES
-        ($1, $2, $3, 'en_attente')
+        ($1, $2, $3, 'en_attente', $4)
       RETURNING id
       `,
       [
         data.nom,
         data.note,
         data.commentaire,
+        atelierId,
       ]
     );
 

@@ -1,7 +1,7 @@
 {
   "name": "atelier-reparation-backend",
   "version": "1.0.0",
-  "description": "API backend du site vitrine - atelier de réparation électronique",
+  "description": "API multi-ateliers (site vitrine + gestion) - réparation électronique",
   "main": "src/server.js",
   "type": "commonjs",
   "engines": {
@@ -10,8 +10,10 @@
   "scripts": {
     "start": "node start.js",
     "dev": "nodemon src/server.js",
+    "migrate": "node src/migrate.js",
     "seed": "node src/seed.js",
-    "admin:reset": "node src/resetAdmin.js"
+    "admin:reset": "node src/resetAdmin.js",
+    "dev:create": "node src/scripts/createDeveloper.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

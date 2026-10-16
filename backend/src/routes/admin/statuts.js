@@ -4,8 +4,7 @@ const { ok } = require('../../utils/response');
 
 const router = express.Router();
 
-// GET /api/admin/statuts — référentiel des statuts (section 11), utilisé
-// pour peupler les menus déroulants de l'espace admin.
+// GET /api/admin/statuts
 router.get('/', async (req, res, next) => {
   try {
     const result = await db.query(

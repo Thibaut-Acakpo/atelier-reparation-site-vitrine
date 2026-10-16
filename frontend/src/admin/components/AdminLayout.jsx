@@ -17,6 +17,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useAtelier } from '../../context/AtelierContext';
 
 const LIENS = [
   { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true },
@@ -37,6 +38,8 @@ const LABEL_ROLE = { technicien: 'Technicien', assistant: 'Assistant technicien'
 
 export default function AdminLayout() {
   const { admin, logout } = useAuth();
+  const { atelier } = useAtelier();
+
   const [menuOuvert, setMenuOuvert] = useState(false);
 
   const liensVisibles = LIENS.filter((lien) => !lien.roles || lien.roles.includes(admin?.role));
@@ -45,7 +48,7 @@ export default function AdminLayout() {
     <>
       <div className="px-5 py-6">
         <p className="font-titre text-lg font-bold text-white">Espace admin</p>
-        <p className="mt-0.5 text-xs text-white/50">Atelier de réparation électronique</p>
+        <p className="mt-0.5 truncate text-xs text-white/50">{atelier.nom}</p>
       </div>
       <nav className="flex-1 space-y-1 px-3">
         {liensVisibles.map((lien) => (

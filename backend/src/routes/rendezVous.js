@@ -22,7 +22,8 @@ const rdvLimiter = rateLimit({
 // POST /api/rendez-vous
 router.post('/', rdvLimiter, async (req, res, next) => {
   try {
-    const { valid, errors, data } = validateRendezVous(req.body);
+    const { valid, errors, data } =
+      validateRendezVous(req.body);
 
     if (!valid) {
       return fail(
@@ -33,17 +34,25 @@ router.post('/', rdvLimiter, async (req, res, next) => {
       );
     }
 
+    const atelierId = req.atelier.id;
+
     // Création du client
     const clientResult = await db.query(
       `
-      INSERT INTO clients (nom_complet, telephone, email)
-      VALUES ($1, $2, $3)
+      INSERT INTO clients (
+        nom_complet,
+        telephone,
+        email,
+        atelier_id
+      )
+      VALUES ($1, $2, $3, $4)
       RETURNING id
       `,
       [
         data.nom_complet,
         data.telephone,
         data.email,
+        atelierId,
       ]
     );
 
@@ -58,9 +67,10 @@ router.post('/', rdvLimiter, async (req, res, next) => {
           date_souhaitee,
           heure_souhaitee,
           motif,
-          statut
+          statut,
+          atelier_id
         )
-      VALUES ($1, $2, $3, $4, 'en_attente')
+      VALUES ($1, $2, $3, $4, 'en_attente', $5)
       RETURNING id
       `,
       [
@@ -68,6 +78,7 @@ router.post('/', rdvLimiter, async (req, res, next) => {
         data.date_souhaitee,
         data.heure_souhaitee,
         data.motif,
+        atelierId,
       ]
     );
 

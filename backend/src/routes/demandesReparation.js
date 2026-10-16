@@ -3,7 +3,10 @@ const rateLimit = require('express-rate-limit');
 const db = require('../db-postgres');
 const { ok, fail } = require('../utils/response');
 const { validateDemandeReparation } = require('../utils/validation');
-const { upload, verifyUploadedImage } = require('../middleware/upload');
+const {
+  upload,
+  verifyUploadedImage,
+} = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -29,7 +32,8 @@ router.post(
   verifyUploadedImage,
   async (req, res, next) => {
     try {
-      const { valid, errors, data } = validateDemandeReparation(req.body);
+      const { valid, errors, data } =
+        validateDemandeReparation(req.body);
 
       if (!valid) {
         return fail(
@@ -40,14 +44,26 @@ router.post(
         );
       }
 
+      const atelierId = req.atelier.id;
+
       // Création du client
       const clientResult = await db.query(
         `
-        INSERT INTO clients (nom_complet, telephone, email)
-        VALUES ($1, $2, $3)
+        INSERT INTO clients (
+          nom_complet,
+          telephone,
+          email,
+          atelier_id
+        )
+        VALUES ($1, $2, $3, $4)
         RETURNING id
         `,
-        [data.nom_complet, data.telephone, data.email]
+        [
+          data.nom_complet,
+          data.telephone,
+          data.email,
+          atelierId,
+        ]
       );
 
       const clientId = clientResult.rows[0].id;
@@ -55,8 +71,14 @@ router.post(
       // Création de l'appareil
       const appareilResult = await db.query(
         `
-        INSERT INTO appareils (client_id, type, marque, modele)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO appareils (
+          client_id,
+          type,
+          marque,
+          modele,
+          atelier_id
+        )
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING id
         `,
         [
@@ -64,6 +86,7 @@ router.post(
           data.type,
           data.marque,
           data.modele,
+          atelierId,
         ]
       );
 
@@ -84,9 +107,10 @@ router.post(
             photo_path,
             date_souhaitee,
             heure_souhaitee,
-            confidentialite_acceptee
+            confidentialite_acceptee,
+            atelier_id
           )
-        VALUES ($1, $2, $3, $4, $5, $6, 1)
+        VALUES ($1, $2, $3, $4, $5, $6, 1, $7)
         RETURNING id
         `,
         [
@@ -96,6 +120,7 @@ router.post(
           photoPath,
           data.date_souhaitee,
           data.heure_souhaitee,
+          atelierId,
         ]
       );
 
@@ -105,13 +130,20 @@ router.post(
       await db.query(
         `
         INSERT INTO notifications
-          (type, destinataire, contenu_resume, statut)
-        VALUES ($1, $2, $3, 'a_envoyer')
+          (
+            type,
+            destinataire,
+            contenu_resume,
+            statut,
+            atelier_id
+          )
+        VALUES ($1, $2, $3, 'a_envoyer', $4)
         `,
         [
           'confirmation_demande',
           data.email || data.telephone,
           `Demande #${demandeId} reçue`,
+          atelierId,
         ]
       );
 

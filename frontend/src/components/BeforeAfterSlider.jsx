@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { ImageOff } from 'lucide-react';
+import { urlUpload } from '../data/config';
 
 // Curseur avant/après interactif (section 16). Fonctionne au clic/drag et
 // au clavier (flèches gauche/droite). Si aucune image réelle n'est encore
@@ -53,7 +54,7 @@ export default function BeforeAfterSlider({ imageAvant, imageApres, label }) {
       >
         <div className="absolute inset-0">
           {imageApres ? (
-            <img src={imageApres} alt={`${label} — après intervention`} className="h-full w-full object-cover" />
+            <img src={urlUpload(imageApres)} alt={`${label} — après intervention`} className="h-full w-full object-cover" />
           ) : (
             <Placeholder text="Photo après — à ajouter" />
           )}
@@ -62,7 +63,7 @@ export default function BeforeAfterSlider({ imageAvant, imageApres, label }) {
         <div className="absolute inset-0 overflow-hidden" style={{ width: `${position}%` }}>
           {imageAvant ? (
             <img
-              src={imageAvant}
+              src={urlUpload(imageAvant)}
               alt={`${label} — avant intervention`}
               className="h-full object-cover"
               style={{ width: containerRef.current?.getBoundingClientRect().width || '100%' }}

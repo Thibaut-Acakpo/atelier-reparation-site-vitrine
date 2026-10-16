@@ -1,144 +1,68 @@
-// Crée ou met à jour les comptes de l'espace admin à partir des valeurs
-// du fichier .env :
-// - ADMIN_EMAIL / ADMIN_PASSWORD           → compte "Technicien" (gérant, accès complet)
-// - ASSISTANT_EMAIL / ASSISTANT_PASSWORD   → compte "Assistant technicien" (partagé, accès restreint)
+// Réinitialise (ou crée) un compte admin d'un atelier en ligne de commande.
+// Alternative à l'espace développeur : « Liens & accès » → Réinitialiser.
 //
-// Utile quand ces valeurs ont été renseignées/modifiées dans .env APRÈS un
-// premier `npm run seed` : ce dernier ne crée chaque compte qu'une seule
-// fois (s'il n'existe pas encore) et ne le met jamais à jour ensuite.
-// Cette commande, elle, peut être relancée à tout moment.
-//
-// Usage : npm run admin:reset
+// Usage : npm run admin:reset -- <slug> [technicien|assistant] [email] [mot_de_passe]
+// Exemple : npm run admin:reset -- mon-client technicien gerant@client.com
 
 require('dotenv').config();
+
 const bcrypt = require('bcryptjs');
 const db = require('./db-postgres');
-
-async function upsertCompte({ nom, role, email, motDePasse }) {
-  if (!email || !motDePasse) {
-    return { statut: 'ignore' };
-  }
-
-  if (motDePasse.length < 8) {
-    console.error(
-      `\nLe mot de passe pour "${nom}" doit contenir au moins 8 caractères — ignoré.\n`
-    );
-    return { statut: 'erreur' };
-  }
-
-  const emailNormalise = email.trim().toLowerCase();
-  const hash = await bcrypt.hash(motDePasse, 10);
-
-  // Recherche par rôle plutôt que par email :
-  // il ne doit exister qu'un seul compte "Technicien"
-  // et un seul compte "Assistant technicien".
-  const existant = await db.query(
-    `SELECT id FROM admins WHERE role = $1 LIMIT 1`,
-    [role]
-  );
-
-  if (existant.rowCount > 0) {
-    await db.query(
-      `UPDATE admins
-       SET email = $1,
-           mot_de_passe_hash = $2,
-           actif = 1
-       WHERE id = $3`,
-      [
-        emailNormalise,
-        hash,
-        existant.rows[0].id,
-      ]
-    );
-
-    return {
-      statut: 'maj',
-      email: emailNormalise,
-    };
-  }
-
-  await db.query(
-    `INSERT INTO admins
-      (nom, email, mot_de_passe_hash, role)
-     VALUES ($1, $2, $3, $4)`,
-    [
-      nom,
-      emailNormalise,
-      hash,
-      role,
-    ]
-  );
-
-  return {
-    statut: 'cree',
-    email: emailNormalise,
-  };
-}
+const { genererMotDePasse } = require('./services/provisionAtelier');
 
 async function run() {
-  try {
-    const resultatTechnicien = await upsertCompte({
-      nom: 'Technicien',
-      role: 'technicien',
-      email: process.env.ADMIN_EMAIL,
-      motDePasse: process.env.ADMIN_PASSWORD,
-    });
+  const [slug, role = 'technicien', emailArg, mdpArg] = process.argv.slice(2);
 
-    const resultatAssistant = await upsertCompte({
-      nom: 'Assistant technicien',
-      role: 'assistant',
-      email: process.env.ASSISTANT_EMAIL,
-      motDePasse: process.env.ASSISTANT_PASSWORD,
-    });
-
-    if (
-      resultatTechnicien.statut === 'ignore' &&
-      resultatAssistant.statut === 'ignore'
-    ) {
-      console.error(
-        '\nRenseignez ADMIN_EMAIL/ADMIN_PASSWORD et/ou ASSISTANT_EMAIL/ASSISTANT_PASSWORD dans backend/.env avant de lancer cette commande.\n'
-      );
-
-      process.exit(1);
-    }
-
-    if (
-      resultatTechnicien.statut === 'cree' ||
-      resultatTechnicien.statut === 'maj'
-    ) {
-      console.log(
-        `\nCompte "Technicien" ${
-          resultatTechnicien.statut === 'cree'
-            ? 'créé'
-            : 'mis à jour'
-        } : ${resultatTechnicien.email}`
-      );
-    }
-
-    if (
-      resultatAssistant.statut === 'cree' ||
-      resultatAssistant.statut === 'maj'
-    ) {
-      console.log(
-        `Compte "Assistant technicien" ${
-          resultatAssistant.statut === 'cree'
-            ? 'créé'
-            : 'mis à jour'
-        } : ${resultatAssistant.email}`
-      );
-    }
-
-    console.log(
-      '\nConnexion sur : http://localhost:5173/admin/connexion\n'
-    );
-  } catch (err) {
-    console.error(
-      '\nErreur lors de la création/mise à jour des comptes administrateur :',
-      err
-    );
-
+  if (!slug || !['technicien', 'assistant'].includes(role)) {
+    console.error('Usage : npm run admin:reset -- <slug> [technicien|assistant] [email] [mot_de_passe]');
     process.exit(1);
   }
+
+  const at = await db.query('SELECT id FROM ateliers WHERE slug = $1', [slug]);
+  if (at.rowCount === 0) {
+    console.error(`Aucun atelier avec le lien « ${slug} ».`);
+    process.exit(1);
+  }
+  const atelierId = at.rows[0].id;
+
+  const motDePasse = mdpArg || genererMotDePasse();
+  if (motDePasse.length < 8) {
+    console.error('Le mot de passe doit contenir au moins 8 caractères.');
+    process.exit(1);
+  }
+  const hash = await bcrypt.hash(motDePasse, 10);
+
+  const existant = await db.query(
+    'SELECT id, email FROM admins WHERE atelier_id = $1 AND role = $2',
+    [atelierId, role]
+  );
+
+  let email;
+  if (existant.rowCount > 0) {
+    email = (emailArg || existant.rows[0].email).toLowerCase();
+    await db.query(
+      'UPDATE admins SET email = $1, mot_de_passe_hash = $2, actif = 1 WHERE id = $3',
+      [email, hash, existant.rows[0].id]
+    );
+  } else {
+    if (!emailArg) {
+      console.error('Ce compte n’existe pas : indiquez son e-mail en 3e argument.');
+      process.exit(1);
+    }
+    email = emailArg.toLowerCase();
+    await db.query(
+      `INSERT INTO admins (atelier_id, nom, email, mot_de_passe_hash, role, actif)
+       VALUES ($1,$2,$3,$4,$5,1)`,
+      [atelierId, role === 'assistant' ? 'Assistant technicien' : 'Technicien', email, hash, role]
+    );
+  }
+
+  console.log(`Compte ${role} de « ${slug} » : ${email} / ${motDePasse}`);
 }
 
-run();
+run()
+  .then(() => db.end())
+  .catch((err) => {
+    console.error('Échec :', err.message);
+    process.exit(1);
+  });

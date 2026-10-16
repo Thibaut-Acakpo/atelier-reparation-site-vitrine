@@ -1,84 +1,45 @@
 # Déploiement en production
 
-## Principes (section 21 et 23 du cahier des charges)
+## Principes
 
 - HTTPS obligatoire.
-- Base de données avec sauvegardes régulières.
-- Secrets uniquement via variables d'environnement (jamais dans le dépôt).
-- Compression et cache activés.
+- Sauvegardes régulières de la base PostgreSQL (elle contient les données de **tous** vos clients).
+- Secrets uniquement par variables d'environnement, jamais dans le dépôt.
+- Le même frontend et la même API servent tous les clients : ajouter un client ne demande **aucun redéploiement**.
 
-## 1. Backend
+## Option A — Render (fichier `render.yaml` fourni)
 
-1. Provisionner un serveur (VPS ou hébergement Node.js).
-2. Copier le dossier `backend/`, installer les dépendances (`npm ci --omit=dev`).
-3. Créer un `.env` de production à partir de `.env.example` avec de
-   vraies valeurs, en particulier :
-   - `FRONTEND_URL` pointant vers le domaine réel du site,
-   - `TRACKING_SALT` généré aléatoirement (`openssl rand -hex 32`),
-   - `JWT_SECRET` généré aléatoirement (`openssl rand -hex 32`) — ne
-     jamais réutiliser la valeur d'exemple en production,
-   - `ADMIN_EMAIL` / `ADMIN_PASSWORD` : identifiants du premier compte
-     administrateur, créé au premier `npm run seed`. Changer ce mot de
-     passe dès la première connexion à `/admin/connexion`.
-   - `UPLOAD_DIR` pointant vers un dossier **hors de la racine servie
-     directement par le serveur web**, pour éviter toute exécution de
-     fichier uploadé (section 18).
-4. Lancer l'API derrière un gestionnaire de process (`pm2`, `systemd`, ou
-   équivalent) plutôt qu'en premier plan.
-5. Placer un reverse proxy (nginx, Caddy) devant l'API pour gérer HTTPS
-   (Let's Encrypt) et rediriger `/api` et `/uploads` vers le port Node.
-6. Sauvegarder régulièrement le fichier SQLite (`backend/data/*.sqlite`)
-   ou le dossier de données de la base choisie.
+1. Pousser le dépôt sur GitHub, puis **New → Blueprint** sur Render. Il crée la base PostgreSQL, l'API et le frontend statique.
+2. Renseigner les variables marquées « à saisir » :
+   - API : `FRONTEND_URL` (URL du frontend), `DEVELOPER_EMAIL`, `DEVELOPER_PASSWORD`.
+   - Frontend : `VITE_API_URL` (URL de l'API), puis relancer le build du frontend.
+3. Au premier démarrage, l'API crée les tables et votre compte développeur automatiquement.
+4. Ouvrir `https://<frontend>/gestion` et créer vos clients.
 
-### Portage vers MySQL / PostgreSQL (recommandé à l'échelle)
+`JWT_SECRET` et `TRACKING_SALT` sont générés par Render. L'API refuse de démarrer en production avec des secrets par défaut.
 
-Le schéma dans `backend/src/db.js` utilise une syntaxe SQLite volontairement
-proche du SQL standard. Pour porter vers MySQL/PostgreSQL :
+> ⚠️ **Photos** : le disque d'un service Render gratuit est éphémère ; les photos uploadées (réalisations, photos de pannes) sont perdues à chaque redéploiement. Utiliser un disque persistant Render (offre payante) monté sur `UPLOAD_DIR`, ou migrer vers un stockage objet.
 
-- Remplacer `INTEGER PRIMARY KEY AUTOINCREMENT` par `SERIAL PRIMARY KEY`
-  (PostgreSQL) ou `INT AUTO_INCREMENT PRIMARY KEY` (MySQL).
-- Remplacer `datetime('now')` par `NOW()` / `CURRENT_TIMESTAMP`.
-- Remplacer le module `node:sqlite` par `pg` ou `mysql2`, et adapter
-  `backend/src/db.js` (la logique des routes, elle, ne change pas car
-  elle passe par des requêtes préparées simples).
-- Vérifier les contraintes `CHECK` (supportées nativement par PostgreSQL ;
-  à adapter en triggers ou validation applicative sous MySQL < 8.0.16).
+## Option B — VPS
 
-## 2. Frontend
-
-1. `npm run build` dans `frontend/` génère `frontend/dist/`.
-2. Servir ce dossier via un serveur statique (nginx, Netlify, Vercel,
-   ou le même serveur nginx que le backend).
-3. Configurer les routes pour rediriger toute URL inconnue vers
-   `index.html` (routage côté client avec React Router) — par exemple,
-   avec nginx :
+1. Installer Node 22+ et PostgreSQL, copier `backend/`, puis `npm ci --omit=dev`.
+2. Créer `.env` (voir `INSTALLATION.md`) avec `NODE_ENV=production`, des secrets aléatoires (`openssl rand -hex 32`),
+   `FRONTEND_URL`, `DATABASE_URL`, `DEVELOPER_EMAIL`, `DEVELOPER_PASSWORD`.
+3. Lancer avec `npm start` derrière `pm2` ou `systemd`.
+4. Reverse proxy (nginx/Caddy) avec HTTPS devant l'API : rediriger `/api` et `/uploads` vers le port Node.
+5. Frontend : `VITE_API_URL=https://api.exemple.com npm run build`, servir `frontend/dist/` avec redirection vers `index.html` :
 
    ```nginx
-   location / {
-     try_files $uri /index.html;
-   }
+   location / { try_files $uri /index.html; }
    ```
 
-4. Si le frontend et l'API ne partagent pas le même domaine, définir
-   `VITE_API_URL` avant le build, ou configurer un reverse proxy pour que
-   `/api` et `/uploads` pointent vers le backend depuis le même domaine
-   (recommandé, évite tout souci de CORS).
+`UPLOAD_DIR` doit pointer hors de la racine servie directement par le serveur web.
 
-## 3. Nom de domaine et HTTPS
+## Domaines personnalisés des clients
 
-- Pointer le domaine vers le serveur.
-- Générer un certificat TLS (Let's Encrypt via Certbot, ou intégré à
-  l'hébergeur).
-- Forcer la redirection HTTP → HTTPS.
+Voir `docs/MULTI_CLIENTS.md`. Ajouter le domaine chez l'hébergeur du frontend (même frontend pour tous),
+l'enregistrer dans `/gestion → Domaine`, puis configurer le DNS. Les liens `/s/<slug>` restent toujours valables.
 
-## 4. Vérifications avant mise en ligne (section 26)
+## Sauvegardes
 
-Voir la checklist complète dans `docs/PLAN_DE_TESTS.md`. Points essentiels :
-
-- [ ] Le site est bien servi en HTTPS, sans contenu mixte.
-- [ ] Les variables `.env` de production sont renseignées et absentes du dépôt.
-- [ ] Les données d'exemple ont été remplacées (voir `docs/DONNEES_A_REMPLACER.md`).
-- [ ] Une sauvegarde de la base de données est planifiée.
-- [ ] Le formulaire de demande, de rendez-vous, de contact et d'avis
-      fonctionnent en production (test réel, pas seulement en local).
-- [ ] La page de suivi renvoie un message neutre pour un code inexistant.
+`pg_dump "$DATABASE_URL" > sauvegarde.sql` (à planifier), et sauvegarde du dossier `UPLOAD_DIR`.

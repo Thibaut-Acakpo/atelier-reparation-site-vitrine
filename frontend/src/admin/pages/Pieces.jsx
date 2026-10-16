@@ -21,16 +21,16 @@ export default function Pieces() {
   const ajouter = async (e) => {
     e.preventDefault();
     if (!nom.trim()) return;
-    await adminApi.creerPiece({ nom, reference });
+    const res = await adminApi.creerPiece({ nom, reference });
+    if (res.cancelled || !res.success) return;
     setNom('');
     setReference('');
     charger();
   };
 
   const supprimer = async (id) => {
-    if (!window.confirm('Supprimer cette pièce du catalogue ?')) return;
-    await adminApi.supprimerPiece(id);
-    charger();
+    const res = await adminApi.supprimerPiece(id);
+    if (res.success) charger();
   };
 
   return (

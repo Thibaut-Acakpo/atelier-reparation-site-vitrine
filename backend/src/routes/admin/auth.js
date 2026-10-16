@@ -34,10 +34,14 @@ router.post('/login', loginLimiter, async (req, res, next) => {
 
     const result = await db.query(
       `
-      SELECT *
-      FROM admins
-      WHERE email = $1
-        AND actif = 1
+      SELECT a.*,
+             t.nom AS atelier_nom,
+             t.slug AS atelier_slug
+      FROM admins a
+      JOIN ateliers t ON t.id = a.atelier_id
+      WHERE a.email = $1
+        AND a.actif = 1
+        AND t.actif = 1
       `,
       [email]
     );
@@ -78,6 +82,9 @@ router.post('/login', loginLimiter, async (req, res, next) => {
           nom: admin.nom,
           email: admin.email,
           role: admin.role,
+          atelier_id: admin.atelier_id,
+          atelier_nom: admin.atelier_nom,
+          atelier_slug: admin.atelier_slug,
         },
       },
       'Connexion réussie.'

@@ -6,20 +6,12 @@ dans le code :
 
 ## 1. Coordonnées de l'atelier
 
-Fichier : `frontend/src/data/constants.js`
+Elles ne sont plus dans le code : elles se saisissent **par client** dans l'espace développeur
+(`/gestion` → Identité, Contact & horaires). Le tableau de bord signale les clients dont
+téléphone, WhatsApp, e-mail, adresse ou logo sont encore vides.
 
-| Donnée | Valeur actuelle (exemple) |
-|---|---|
-| Nom de l'atelier | "Atelier de réparation électronique" (nom définitif à ajouter) |
-| Adresse | Quartier Cadjehoun, près du carrefour Vedoko, Cotonou, Bénin |
-| Téléphone | +229 90 12 34 56 |
-| WhatsApp | +229 90 12 34 56 |
-| Email | contact@atelier-maintenance.bj |
-| Horaires | Lun-Ven 8h-18h, Sam 9h-13h, Dim fermé (déjà conformes aux règles métier, à confirmer) |
-
-Remplacer ces valeurs, puis vérifier que `mapsQuery` (même fichier) pointe
-vers la localisation réelle pour que la carte et l'itinéraire soient
-corrects.
+Les valeurs de `frontend/src/data/constants.js` ne servent que de secours si l'API est injoignable ;
+le client « démonstration » créé par `npm run seed` contient des coordonnées d'exemple à remplacer ou à supprimer.
 
 ## 2. Photos
 

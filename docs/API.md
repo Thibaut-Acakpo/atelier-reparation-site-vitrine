@@ -14,6 +14,19 @@ Toutes les réponses suivent le format défini section 20 du cahier des charges 
 
 Base URL en développement : `http://localhost:4000` (ou via le proxy Vite : `http://localhost:5173`).
 
+## Multi-ateliers
+
+Chaque requête publique concerne **un** atelier, identifié par :
+
+1. l'en-tête `X-Atelier-Slug: <slug>` (ou `?atelier=<slug>`) — envoyé automatiquement par le frontend pour les liens `/s/<slug>` ;
+2. sinon le domaine de la requête (`Origin` / `Referer`) s'il est enregistré pour un atelier ;
+3. en local uniquement : le premier atelier actif.
+
+Slug inconnu ou atelier désactivé → HTTP 404. Les routes `/api/admin/*` se basent sur l'atelier inscrit dans le jeton.
+
+`GET /api/settings` renvoie les paramètres publics de l'atelier (nom et logo issus de la table `ateliers`).
+Il n'existe **aucune** route publique d'écriture des paramètres.
+
 ## POST /api/demandes-reparation
 
 Crée une demande de réparation. `multipart/form-data` (pour permettre l'envoi de la photo facultative).
@@ -166,3 +179,39 @@ invalide ou expiré renvoie **HTTP 401**.
 Champs attendus par type : `services` (`titre, description, icone, ordre`),
 `appareils` (`code, titre, description, icone, ordre`), `faq`
 (`question, reponse, ordre`).
+
+## Espace développeur — `/api/gestion/*`
+
+Jeton développeur (`POST /api/gestion/auth/login`, puis `Authorization: Bearer <jeton>`).
+
+### Ateliers
+
+- `GET /api/gestion/ateliers` — liste avec indicateurs (`demandes_nouvelles`, `reparations`, `rendez_vous_en_attente`, `avis_en_attente`, `messages_non_traites`) et `a_completer`.
+- `POST /api/gestion/ateliers` — crée un client complet (atelier + contenu + comptes). Corps :
+  `nom`, `slug` (déduit du nom si absent), `domaine`, `logo_url`, `modele_id` (atelier à dupliquer),
+  `admin_email` (obligatoire), `admin_mot_de_passe` (généré si absent, 8 caractères min.),
+  `avec_assistant`, `assistant_email`. Réponse 201 : `{ atelier, comptes: [{ role, email, mot_de_passe }] }` — les mots de passe ne sont renvoyés qu'ici.
+- `GET /api/gestion/ateliers/:id`
+- `PATCH /api/gestion/ateliers/:id` — champs partiels : `nom`, `slug`, `domaine`, `logo_url`.
+- `PATCH /api/gestion/ateliers/:id/statut` — `{ actif: true|false }`.
+- `DELETE /api/gestion/ateliers/:id` — `{ confirmation: "<slug>" }`, uniquement si l'atelier est désactivé.
+
+### Paramètres d'un atelier
+
+- `GET /api/gestion/ateliers/:id/settings`
+- `PUT /api/gestion/ateliers/:id/settings` — clés autorisées : `slogan, adresse, telephone, whatsapp, email, horaires, mapsQuery,
+  couleurPrincipale, couleurSecondaire, couleurAccent, couleurFond, couleurTexte, theme, seoTitre, seoDescription, seoMotsCles, seoImage,
+  facebook, instagram, linkedin, youtube, tiktok, x`.
+
+### Comptes de gestion d'un atelier
+
+- `GET /api/gestion/ateliers/:id/comptes`
+- `POST /api/gestion/ateliers/:id/comptes/:role/reinitialiser` — `role` = `technicien` | `assistant` ; corps facultatif `email`, `mot_de_passe` ; renvoie le mot de passe (généré si absent).
+- `PATCH /api/gestion/ateliers/:id/comptes/:role` — `{ actif }`.
+
+### Contenu d'un atelier
+
+Mêmes routes et mêmes champs que l'espace admin, préfixées par l'atelier :
+
+- `/api/gestion/ateliers/:id/contenu/{services|appareils|faq}` (GET, POST, PATCH `/:itemId`, DELETE `/:itemId`)
+- `/api/gestion/ateliers/:id/realisations` (GET, POST multipart, PATCH `/:rid`, DELETE `/:rid`)

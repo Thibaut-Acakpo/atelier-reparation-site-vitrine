@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { adminApi, getToken, setToken, clearToken } from '../api';
+import { demanderConfirmation } from '../../gestion/components/ui';
 
 const AuthContext = createContext(null);
 
@@ -36,7 +37,13 @@ export function AuthProvider({ children }) {
     return res;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const confirme = await demanderConfirmation({
+      titre: 'Déconnexion',
+      message: 'Voulez-vous vraiment vous déconnecter ?',
+      confirmLabel: 'Se déconnecter',
+    });
+    if (!confirme) return;
     clearToken();
     setAdmin(null);
   };

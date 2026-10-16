@@ -57,7 +57,7 @@ production, et sert de base à une future suite de tests automatisés.
 ## 9. Sécurité des entrées
 
 - [ ] Tentative d'injection HTML/JS dans les champs texte (ex. `<script>alert(1)</script>` dans un commentaire d'avis) → neutralisée côté serveur (`sanitize-html`).
-- [ ] Tentative d'injection SQL dans un champ texte → sans effet (requêtes préparées via `node:sqlite`).
+- [ ] Tentative d'injection SQL dans un champ texte → sans effet (requêtes paramétrées via `pg`).
 
 ## 10. Performance
 
@@ -95,3 +95,15 @@ production, et sert de base à une future suite de tests automatisés.
 - [ ] Accessibilité de base respectée.
 - [ ] Secrets absents du dépôt (`.env` dans `.gitignore`).
 - [ ] HTTPS en production.
+
+
+## 12. Multi-clients (espace développeur)
+
+- [ ] Créer un nouveau client depuis `/gestion` : son site s'ouvre sur `/s/<slug>` et son admin sur `/s/<slug>/admin/connexion`.
+- [ ] Le gérant du client B ne voit aucune donnée du client A (demandes, clients, messages, réparations).
+- [ ] Une demande déposée sur le site de A n'apparaît que dans l'admin de A.
+- [ ] Un lien `/s/inconnu` affiche « Site introuvable ».
+- [ ] Un client désactivé : site inaccessible et connexion admin refusée ; réactivé : tout refonctionne.
+- [ ] Renommer le client dans « Identité » met à jour le nom affiché sur son site.
+- [ ] `PUT /api/settings` (route publique) renvoie 404 : les paramètres ne se modifient que depuis `/gestion`.
+- [ ] Nouveau mot de passe généré depuis « Liens & accès » : l'ancien ne fonctionne plus.

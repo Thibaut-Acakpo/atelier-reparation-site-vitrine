@@ -17,8 +17,9 @@ import {
   EmptyState,
   LoadingState,
 } from '../components/ui';
+import { useToast } from '../../gestion/components/ui';
+import { urlUpload } from '../../data/config';
 
-const API_URL = import.meta.env.VITE_API_URL;
 
 const ONGLETS = [
   { value: '', label: 'Toutes' },
@@ -36,6 +37,7 @@ const TONE_STATUT = {
 };
 
 export default function Demandes() {
+  const toast = useToast();
   const [onglet, setOnglet] = useState('');
   const [demandes, setDemandes] = useState(null);
   const [resultatConversion, setResultatConversion] = useState(null);
@@ -63,27 +65,7 @@ export default function Demandes() {
   // ============================================================
   // Construire l'URL complète d'une photo
   // ============================================================
-  const obtenirUrlPhoto = (photoPath) => {
-    if (!photoPath) {
-      return '';
-    }
-
-    // Si le backend renvoie déjà une URL complète,
-    // on la conserve telle quelle.
-    if (
-      photoPath.startsWith('http://') ||
-      photoPath.startsWith('https://')
-    ) {
-      return photoPath;
-    }
-
-    // Sinon, on ajoute l'URL du backend.
-    const chemin = photoPath.startsWith('/')
-      ? photoPath
-      : `/${photoPath}`;
-
-    return `${API_URL}${chemin}`;
-  };
+  const obtenirUrlPhoto = (photoPath) => urlUpload(photoPath);
 
   // ============================================================
   // Marquer en cours d'examen
@@ -95,10 +77,8 @@ export default function Demandes() {
 
     if (res.success) {
       charger();
-    } else {
-      window.alert(
-        res.message || 'Impossible de modifier la demande.'
-      );
+    } else if (!res.cancelled) {
+      toast.erreur(res.message || 'Impossible de modifier la demande.');
     }
   };
 
@@ -106,20 +86,14 @@ export default function Demandes() {
   // Refuser
   // ============================================================
   const refuser = async (id) => {
-    if (!window.confirm('Refuser cette demande ?')) {
-      return;
-    }
-
     const res = await adminApi.majDemande(id, {
       statut_traitement: 'refusee',
     });
 
     if (res.success) {
       charger();
-    } else {
-      window.alert(
-        res.message || 'Impossible de refuser la demande.'
-      );
+    } else if (!res.cancelled) {
+      toast.erreur(res.message || 'Impossible de refuser la demande.');
     }
   };
 
@@ -205,10 +179,8 @@ export default function Demandes() {
     if (res.success) {
       setResultatConversion(res.data);
       charger();
-    } else {
-      window.alert(
-        res.message || 'Impossible de convertir la demande.'
-      );
+    } else if (!res.cancelled) {
+      toast.erreur(res.message || 'Impossible de convertir la demande.');
     }
   };
 

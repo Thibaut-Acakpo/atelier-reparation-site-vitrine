@@ -73,20 +73,23 @@ export default function ReparationDetail() {
   };
 
   const enregistrerDevis = async (decision) => {
-    await adminApi.majDevis(id, decision);
+    const res = await adminApi.majDevis(id, decision);
+    if (!res.success) return;
     charger();
   };
 
   const ajouterPiece = async () => {
     if (!pieceSelectionnee) return;
-    await adminApi.ajouterPiece(id, { piece_id: pieceSelectionnee, quantite: quantitePiece });
+    const res = await adminApi.ajouterPiece(id, { piece_id: pieceSelectionnee, quantite: quantitePiece });
+    if (res.cancelled || !res.success) return;
     setPieceSelectionnee('');
     setQuantitePiece(1);
     charger();
   };
 
   const retirerPiece = async (reparationPieceId) => {
-    await adminApi.retirerPiece(id, reparationPieceId);
+    const res = await adminApi.retirerPiece(id, reparationPieceId);
+    if (!res.success) return;
     charger();
   };
 

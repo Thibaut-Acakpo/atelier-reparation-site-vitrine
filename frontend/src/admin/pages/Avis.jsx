@@ -27,14 +27,13 @@ export default function Avis() {
   useEffect(charger, [onglet]);
 
   const changerStatut = async (id, statut) => {
-    await adminApi.majAvis(id, statut);
-    charger();
+    const res = await adminApi.majAvis(id, statut);
+    if (res.success) charger();
   };
 
   const supprimer = async (id) => {
-    if (!window.confirm('Supprimer définitivement cet avis ?')) return;
-    await adminApi.supprimerAvis(id);
-    charger();
+    const res = await adminApi.supprimerAvis(id);
+    if (res.success) charger();
   };
 
   return (

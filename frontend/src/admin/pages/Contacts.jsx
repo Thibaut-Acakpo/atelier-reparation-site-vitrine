@@ -14,8 +14,8 @@ export default function Contacts() {
   useEffect(charger, [filtre]);
 
   const basculerTraite = async (id, traite) => {
-    await adminApi.majContact(id, !traite);
-    charger();
+    const res = await adminApi.majContact(id, !traite);
+    if (res.success) charger();
   };
 
   return (
