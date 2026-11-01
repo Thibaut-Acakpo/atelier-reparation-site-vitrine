@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { Lock, Mail, Sparkles } from 'lucide-react';
+import { Lock, Mail, Sparkles, Eye, EyeOff } from 'lucide-react'; // Ajout de Eye et EyeOff
 import { useDeveloperAuth } from '../context/DeveloperAuthContext';
 import { Alert, Button, Field, Input, TiltCard } from '../components/ui';
 
@@ -11,6 +11,9 @@ export default function Login() {
   const [motDePasse, setMotDePasse] = useState('');
   const [erreur, setErreur] = useState('');
   const [connexion, setConnexion] = useState(false);
+  
+  // Nouvel état pour afficher/cacher le mot de passe
+  const [showPassword, setShowPassword] = useState(false);
 
   if (chargement) return <div className="dev-root grid min-h-screen place-items-center">Chargement…</div>;
   if (developer) return <Navigate to="/gestion" replace />;
@@ -43,18 +46,47 @@ export default function Login() {
 
         <form onSubmit={soumettre} className="space-y-5">
           {erreur && <Alert tone="error">{erreur}</Alert>}
+          
           <Field label="Adresse e-mail">
             <div className="relative">
               <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-              <Input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10" placeholder="vous@exemple.com" />
+              {/* Ajout de !pl-11 pour forcer le padding et ne pas cacher le texte */}
+              <Input 
+                type="email" 
+                required 
+                autoComplete="username" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                className="!pl-11" 
+                placeholder="vous@exemple.com" 
+              />
             </div>
           </Field>
+
           <Field label="Mot de passe">
             <div className="relative">
               <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-              <Input type="password" required autoComplete="current-password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} className="pl-10" placeholder="••••••••" />
+              <Input 
+                type={showPassword ? "text" : "password"} 
+                required 
+                autoComplete="current-password" 
+                value={motDePasse} 
+                onChange={(e) => setMotDePasse(e.target.value)} 
+                className="!pl-11 !pr-11" // Padding à droite pour l'œil
+                placeholder="••••••••" 
+              />
+              {/* Bouton pour l'œil */}
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                aria-label={showPassword ? "Cacher le mot de passe" : "Afficher le mot de passe"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </Field>
+
           <Button type="submit" loading={connexion} className="w-full">Se connecter</Button>
         </form>
       </TiltCard>
