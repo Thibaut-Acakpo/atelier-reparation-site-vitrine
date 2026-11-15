@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Lock, Mail, Sparkles, Eye, EyeOff } from 'lucide-react'; // Ajout de Eye et EyeOff
 import { useDeveloperAuth } from '../context/DeveloperAuthContext';
-import { Alert, Button, Field, Input, TiltCard } from '../components/ui';
+import { Alert, Button, Field, Input } from '../components/ui';
 
 export default function Login() {
   const { developer, chargement, login } = useDeveloperAuth();
@@ -31,11 +31,9 @@ export default function Login() {
   return (
     <div className="dev-root relative grid min-h-screen place-items-center overflow-hidden px-4">
       <div className="dev-bg" aria-hidden="true">
-        <div className="dev-blob left-10 top-10 h-96 w-96 bg-sky-500" />
-        <div className="dev-blob bottom-0 right-10 h-[26rem] w-[26rem] bg-indigo-600" style={{ animationDelay: '-8s' }} />
       </div>
 
-      <TiltCard className="dev-reveal relative z-10 w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/70 p-8 shadow-2xl backdrop-blur-xl" max={4}>
+      <div className="dev-reveal relative z-10 w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-2xl">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-sky-400 to-indigo-500 shadow-lg shadow-sky-500/30">
             <Sparkles className="h-7 w-7 text-white" />
@@ -89,7 +87,7 @@ export default function Login() {
 
           <Button type="submit" loading={connexion} className="w-full">Se connecter</Button>
         </form>
-      </TiltCard>
+      </div>
     </div>
   );
 }

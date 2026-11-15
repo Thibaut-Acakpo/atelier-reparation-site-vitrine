@@ -13,39 +13,6 @@ export function Reveal({ children, delay = 0, className = '' }) {
   );
 }
 
-// Carte qui s'incline en 3D selon la position de la souris.
-export function TiltCard({ children, className = '', max = 6, ...props }) {
-  const ref = useRef(null);
-
-  const onMove = (e) => {
-    const el = ref.current;
-    if (!el || window.matchMedia('(pointer: coarse)').matches) return;
-    const r = el.getBoundingClientRect();
-    const px = (e.clientX - r.left) / r.width - 0.5;
-    const py = (e.clientY - r.top) / r.height - 0.5;
-    el.style.setProperty('--ry', `${px * max}deg`);
-    el.style.setProperty('--rx', `${-py * max}deg`);
-  };
-  const onLeave = () => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.setProperty('--ry', '0deg');
-    el.style.setProperty('--rx', '0deg');
-  };
-
-  return (
-    <div
-      ref={ref}
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
-      className={`dev-tilt ${className}`}
-      {...props}
-    >
-      {children}
-    </div>
-  );
-}
-
 export function CountUp({ value = 0, duration = 900 }) {
   const [affiche, setAffiche] = useState(0);
 
@@ -89,7 +56,7 @@ export function Panel({ titre, description, children, className = '', delay = 0 
   return (
     <Reveal delay={delay}>
       <section
-        className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl shadow-black/20 backdrop-blur sm:p-6 ${className}`}
+        className={`rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-xl shadow-black/20 sm:p-6 ${className}`}
       >
         {(titre || description) && (
           <header className="mb-5">
@@ -128,7 +95,7 @@ export function Textarea(props) {
 
 const VARIANTES = {
   primary:
-    'bg-gradient-to-r from-sky-500 to-indigo-500 text-white shadow-lg shadow-sky-500/20 hover:from-sky-400 hover:to-indigo-400 hover:-translate-y-0.5',
+    'bg-gradient-to-r from-sky-500 to-indigo-500 text-white shadow-lg shadow-sky-500/20 hover:from-sky-400 hover:to-indigo-400',
   secondary: 'border border-slate-700 bg-slate-800/70 text-slate-100 hover:border-slate-500 hover:bg-slate-800',
   ghost: 'text-slate-300 hover:bg-slate-800/70 hover:text-white',
   danger: 'border border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20',
@@ -139,7 +106,7 @@ export function Button({ variant = 'primary', loading = false, icon: Icon, child
     <button
       {...props}
       disabled={props.disabled || loading}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 ${VARIANTES[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTES[variant]} ${className}`}
     >
       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : Icon ? <Icon className="h-4 w-4" /> : null}
       {children}
@@ -232,7 +199,7 @@ export function ConfirmModal({ ouvert, titre, children, confirmLabel = 'Confirme
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={titre}>
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onCancel} />
+      <div className="absolute inset-0 bg-black/70" onClick={onCancel} />
       <div className="dev-toast relative w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
         <div className="mb-4 flex items-start gap-3">
           {danger && <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-400" />}
@@ -391,7 +358,7 @@ export function ToastProvider({ children }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`dev-toast pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-xl backdrop-blur ${
+            className={`dev-toast pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-xl ${
               t.type === 'succes'
                 ? 'border-emerald-500/40 bg-emerald-950/90 text-emerald-100'
                 : 'border-rose-500/40 bg-rose-950/90 text-rose-100'

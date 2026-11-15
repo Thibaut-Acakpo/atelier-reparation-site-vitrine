@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { AlertCircle, ArrowRight, ExternalLink, Inbox, MessageSquare, Plus, Star, Wrench } from 'lucide-react';
 import { useAtelierGestion } from '../context/SelectedAtelierContext';
-import { Badge, Button, CopyButton, CountUp, EmptyState, PageHeader, Reveal, Spinner, TiltCard, Alert } from '../components/ui';
+import { Badge, Button, CopyButton, CountUp, EmptyState, PageHeader, Reveal, Spinner, Alert } from '../components/ui';
 import { lienSite } from '../lib/liens';
 
 const LIBELLES_MANQUANTS = {
@@ -11,11 +11,11 @@ const LIBELLES_MANQUANTS = {
 function Stat({ icone: Icone, valeur, label, delay }) {
   return (
     <Reveal delay={delay}>
-      <TiltCard className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur">
+      <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
         <Icone className="h-5 w-5 text-sky-400" />
         <p className="mt-4 text-3xl font-bold text-white"><CountUp value={valeur} /></p>
         <p className="mt-1 text-sm text-slate-400">{label}</p>
-      </TiltCard>
+      </div>
     </Reveal>
   );
 }
@@ -64,7 +64,7 @@ export default function Dashboard() {
         <div className="grid gap-5 md:grid-cols-2">
           {ateliers.map((a, i) => (
             <Reveal key={a.id} delay={i * 70}>
-              <TiltCard className="h-full rounded-2xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur">
+              <div className="h-full rounded-2xl border border-slate-800 bg-slate-900 p-6">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="truncate text-lg font-semibold text-white">{a.nom}</h3>
@@ -101,7 +101,7 @@ export default function Dashboard() {
                   </a>
                   <CopyButton valeur={lienSite(a)} label="Lien" />
                 </div>
-              </TiltCard>
+              </div>
             </Reveal>
           ))}
         </div>

@@ -36,10 +36,10 @@ function NavItem({ item, onClick }) {
       end={item.end}
       onClick={onClick}
       className={({ isActive }) =>
-        `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+        `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${
           isActive
             ? 'bg-gradient-to-r from-sky-500/20 to-indigo-500/10 text-white ring-1 ring-sky-400/30'
-            : 'text-slate-400 hover:translate-x-1 hover:bg-slate-800/60 hover:text-white'
+            : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
         }`
       }
     >
@@ -69,7 +69,7 @@ function AtelierSwitcher() {
         className="flex w-full items-center gap-3 rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2.5 text-left transition hover:border-sky-400/60"
         aria-expanded={ouvert}
       >
-        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${atelierSelectionne.actif ? 'dev-live bg-emerald-400' : 'bg-slate-500'}`} />
+        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${atelierSelectionne.actif ? 'bg-emerald-400' : 'bg-slate-500'}`} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold text-white">{atelierSelectionne.nom}</span>
           <span className="block truncate text-xs text-slate-500">/s/{atelierSelectionne.slug}</span>
@@ -156,11 +156,9 @@ function Shell() {
   return (
     <div className="dev-root relative min-h-screen">
       <div className="dev-bg" aria-hidden="true">
-        <div className="dev-blob -left-24 top-0 h-96 w-96 bg-sky-500" />
-        <div className="dev-blob right-0 top-1/3 h-[28rem] w-[28rem] bg-indigo-600" style={{ animationDelay: '-6s' }} />
       </div>
 
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-slate-800/80 bg-slate-950/80 backdrop-blur-xl lg:block">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-slate-800/80 bg-slate-950 lg:block">
         {sidebar}
       </aside>
 
@@ -172,7 +170,7 @@ function Shell() {
       )}
 
       <div className="relative z-10 lg:pl-72">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-800/80 bg-slate-950/70 px-4 py-3 backdrop-blur-xl sm:px-8">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-800/80 bg-slate-950 px-4 py-3 sm:px-8">
           <button className="rounded-lg p-2 text-slate-300 hover:bg-slate-800 lg:hidden" onClick={() => setMenuOuvert((o) => !o)} aria-label="Menu">
             {menuOuvert ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
