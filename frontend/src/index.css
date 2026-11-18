@@ -139,3 +139,79 @@ html {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .dev-toast { animation: dev-toast-in 0.3s ease-out both; }
+
+
+/* =========================================================================
+   SITE PUBLIC — page d'accueil (visuel hero, animations sobres)
+   ========================================================================= */
+
+.hero-grid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at 70% 40%, #000 10%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-device {
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 0.25s ease-out;
+  transform-style: preserve-3d;
+}
+
+@keyframes hero-scan {
+  0%   { transform: translateY(0); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(500px); opacity: 0; }
+}
+.hero-scan { animation: hero-scan 4.2s ease-in-out infinite; }
+
+@keyframes hero-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.hero-pulse { animation: hero-pulse 1.8s ease-in-out infinite; }
+
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0) translateZ(40px); }
+  50% { transform: translateY(-8px) translateZ(40px); }
+}
+.hero-chip {
+  animation: hero-float 5s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+  white-space: nowrap;
+  border-radius: 9999px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+}
+
+/* Cartes « bénéfices » : léger halo qui suit le pointeur */
+.glow-card {
+  position: relative;
+  overflow: hidden;
+}
+.glow-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%), rgb(var(--c-or, 196 151 45) / 0.14), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.glow-card:hover::after { opacity: 1; }
+
+/* Ligne de progression du « Comment ça marche » */
+.step-line {
+  background: linear-gradient(90deg, rgb(var(--c-or, 196 151 45)), rgb(var(--c-or, 196 151 45) / 0.1));
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Menu, X, Wrench } from 'lucide-react';
 import { NAV_LINKS } from '../data/constants';
 import { useAtelier } from '../context/AtelierContext';
@@ -9,6 +9,7 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
 
   const { atelier } = useAtelier();
+  const { pathname } = useLocation();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -21,7 +22,7 @@ export default function Header() {
 
   useEffect(() => {
     setOpen(false);
-  }, []);
+  }, [pathname]);
 
   return (
     <header
@@ -94,7 +95,7 @@ export default function Header() {
 
       <div
         className={`overflow-hidden bg-bleu-nuit transition-[max-height] duration-300 ease-in-out lg:hidden ${
-          open ? 'max-h-96' : 'max-h-0'
+          open ? 'max-h-[30rem]' : 'max-h-0'
         }`}
       >
         <nav
@@ -117,6 +118,14 @@ export default function Header() {
               {link.label}
             </NavLink>
           ))}
+
+          <Link
+            to="/deposer"
+            onClick={() => setOpen(false)}
+            className="btn-or mt-3 w-full"
+          >
+            Déposer mon appareil
+          </Link>
         </nav>
       </div>
     </header>

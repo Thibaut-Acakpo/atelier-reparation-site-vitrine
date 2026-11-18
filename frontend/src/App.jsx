@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
 /* =========================================================
@@ -30,21 +31,21 @@ import NotFound from './pages/NotFound';
 import { AuthProvider } from './admin/context/AuthContext';
 import { ToastProvider } from './gestion/components/ui';
 import ProtectedRoute from './admin/components/ProtectedRoute';
-import AdminLayout from './admin/components/AdminLayout';
+const AdminLayout = lazy(() => import('./admin/components/AdminLayout'));
 
-import AdminLogin from './admin/pages/Login';
-import AdminDashboard from './admin/pages/Dashboard';
-import AdminDemandes from './admin/pages/Demandes';
-import AdminRendezVous from './admin/pages/RendezVous';
-import AdminReparations from './admin/pages/Reparations';
-import AdminReparationDetail from './admin/pages/ReparationDetail';
-import AdminClients from './admin/pages/Clients';
-import AdminClientDetail from './admin/pages/ClientDetail';
-import AdminAvis from './admin/pages/Avis';
-import AdminContacts from './admin/pages/Contacts';
-import AdminRealisations from './admin/pages/Realisations';
-import AdminContenu from './admin/pages/Contenu';
-import AdminPieces from './admin/pages/Pieces';
+const AdminLogin = lazy(() => import('./admin/pages/Login'));
+const AdminDashboard = lazy(() => import('./admin/pages/Dashboard'));
+const AdminDemandes = lazy(() => import('./admin/pages/Demandes'));
+const AdminRendezVous = lazy(() => import('./admin/pages/RendezVous'));
+const AdminReparations = lazy(() => import('./admin/pages/Reparations'));
+const AdminReparationDetail = lazy(() => import('./admin/pages/ReparationDetail'));
+const AdminClients = lazy(() => import('./admin/pages/Clients'));
+const AdminClientDetail = lazy(() => import('./admin/pages/ClientDetail'));
+const AdminAvis = lazy(() => import('./admin/pages/Avis'));
+const AdminContacts = lazy(() => import('./admin/pages/Contacts'));
+const AdminRealisations = lazy(() => import('./admin/pages/Realisations'));
+const AdminContenu = lazy(() => import('./admin/pages/Contenu'));
+const AdminPieces = lazy(() => import('./admin/pages/Pieces'));
 
 
 /* =========================================================
@@ -56,24 +57,24 @@ import {
 } from './gestion/context/DeveloperAuthContext';
 
 import DeveloperProtectedRoute from './gestion/components/DeveloperProtectedRoute';
-import DeveloperLayout from './gestion/components/DeveloperLayout';
+const DeveloperLayout = lazy(() => import('./gestion/components/DeveloperLayout'));
 
 import SiteIntrouvable from './components/SiteIntrouvable';
 import { useAtelier } from './context/AtelierContext';
-import DeveloperLogin from './gestion/pages/Login';
-import DeveloperDashboard from './gestion/pages/Dashboard';
-import DeveloperNouveauClient from './gestion/pages/NouveauClient';
-import DeveloperAcces from './gestion/pages/Acces';
-import DeveloperIdentite from './gestion/pages/Identite';
-import DeveloperApparence from './gestion/pages/Apparence';
-import DeveloperContact from './gestion/pages/Contact';
-import DeveloperServices from './gestion/pages/Services';
-import DeveloperAppareils from './gestion/pages/Appareils';
-import DeveloperFaq from './gestion/pages/Faq';
-import DeveloperRealisations from './gestion/pages/Realisations';
-import DeveloperReseauxSociaux from './gestion/pages/ReseauxSociaux';
-import DeveloperSeo from './gestion/pages/Seo';
-import DeveloperDomaine from './gestion/pages/Domaine';
+const DeveloperLogin = lazy(() => import('./gestion/pages/Login'));
+const DeveloperDashboard = lazy(() => import('./gestion/pages/Dashboard'));
+const DeveloperNouveauClient = lazy(() => import('./gestion/pages/NouveauClient'));
+const DeveloperAcces = lazy(() => import('./gestion/pages/Acces'));
+const DeveloperIdentite = lazy(() => import('./gestion/pages/Identite'));
+const DeveloperApparence = lazy(() => import('./gestion/pages/Apparence'));
+const DeveloperContact = lazy(() => import('./gestion/pages/Contact'));
+const DeveloperServices = lazy(() => import('./gestion/pages/Services'));
+const DeveloperAppareils = lazy(() => import('./gestion/pages/Appareils'));
+const DeveloperFaq = lazy(() => import('./gestion/pages/Faq'));
+const DeveloperRealisations = lazy(() => import('./gestion/pages/Realisations'));
+const DeveloperReseauxSociaux = lazy(() => import('./gestion/pages/ReseauxSociaux'));
+const DeveloperSeo = lazy(() => import('./gestion/pages/Seo'));
+const DeveloperDomaine = lazy(() => import('./gestion/pages/Domaine'));
 
 
 /* =========================================================
@@ -191,6 +192,7 @@ export default function App() {
 
       <DeveloperAuthProvider>
 
+        <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-gris-texte" role="status">Chargement…</div>}>
         <Routes>
 
           {/* =================================================
@@ -322,6 +324,7 @@ export default function App() {
           />
 
         </Routes>
+        </Suspense>
 
       </DeveloperAuthProvider>
 

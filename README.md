@@ -81,4 +81,5 @@ sont créés par vous.
 - **Secrets** : en production, l'API refuse de démarrer si `JWT_SECRET` ou `TRACKING_SALT` ont la valeur d'exemple.
 - **Fichiers uploadés** : stockés dans `UPLOAD_DIR`. Sur un hébergement à disque éphémère (Render gratuit), les photos disparaissent à chaque redéploiement : prévoir un disque persistant ou un stockage objet.
 - **E-mails** : aucune notification n'est envoyée en V1 (elles sont enregistrées dans la table `notifications`).
-- **Design public** : sobre par choix (cahier des charges, sections 15-16) ; l'espace développeur, lui, est animé.
+- **Design public** : la page d'accueil est une landing orientée conversion (hero animé, problème → solution → étapes → preuves → offre → FAQ → CTA). Les « preuves » n'affichent que de vrais avis validés et de vraies réalisations ; sinon un encart invite à laisser un avis. Aucun chiffre ni témoignage n'est inventé.
+- **Performance** : espaces admin/développeur et icônes chargés à la demande (bundle principal ≈ 386 Ko au lieu de 1,1 Mo).
