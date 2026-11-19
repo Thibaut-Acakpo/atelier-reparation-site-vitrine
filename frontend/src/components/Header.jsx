@@ -51,7 +51,7 @@ export default function Header() {
         </Link>
 
         <nav
-          className="hidden items-center gap-1 lg:flex"
+          className="hidden items-center gap-1 xl:flex"
           aria-label="Navigation principale"
         >
           {NAV_LINKS.map((link) => (
@@ -59,7 +59,7 @@ export default function Header() {
               key={link.to}
               to={link.to}
               className={({ isActive }) =>
-                `rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                `whitespace-nowrap rounded-md px-2 py-2 text-sm font-medium transition-colors ${
                   isActive
                     ? 'text-or-discret'
                     : 'text-white/85 hover:text-white'
@@ -71,18 +71,18 @@ export default function Header() {
           ))}
         </nav>
 
-        <div className="hidden lg:block">
+        <div className="hidden xl:block">
           <Link
-            to="/suivi"
-            className="btn-or px-4 py-2 text-sm"
+            to="/deposer"
+            className="btn-or whitespace-nowrap !px-4 !py-2 text-sm"
           >
-            Suivre ma réparation
+            Déposer mon appareil
           </Link>
         </div>
 
         <button
           type="button"
-          className="rounded-md p-2 text-white lg:hidden"
+          className="rounded-md p-2 text-white xl:hidden"
           aria-label={
             open ? 'Fermer le menu' : 'Ouvrir le menu'
           }
@@ -94,7 +94,7 @@ export default function Header() {
       </div>
 
       <div
-        className={`overflow-hidden bg-bleu-nuit transition-[max-height] duration-300 ease-in-out lg:hidden ${
+        className={`overflow-hidden bg-bleu-nuit transition-[max-height] duration-300 ease-in-out xl:hidden ${
           open ? 'max-h-[30rem]' : 'max-h-0'
         }`}
       >
